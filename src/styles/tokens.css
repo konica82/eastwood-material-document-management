@@ -1,0 +1,160 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Hồ sơ nguyên liệu — Design tokens
+   Two tiers:
+     Tier 1 — primitives: raw named values. NEVER referenced in components.
+     Tier 2 — semantic:    role-based tokens. The ONLY tokens components use
+                           (via the Tailwind utility classes mapped in
+                           tailwind.config.ts).
+   Theming = override Tier 2 in a [data-theme="…"] block. Zero component edits.
+─────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Tier 1: Primitives ─────────────────────────────────────────────────── */
+:root {
+  --white: #ffffff;
+
+  --blue-50: #eff6ff;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-700: #1d4ed8;
+  --blue-800: #1e40af;
+  --blue-900: #1e3a8a;
+
+  --slate-200: #e5e7eb;
+  --slate-300: #d1d5db;
+  --slate-400: #94a3b8;
+  --slate-600: #475569;
+  --slate-900: #0f172a;
+
+  --neutral-50: #fafafa;
+  --neutral-100: #f4f4f5;
+  --neutral-400: #a3a3a3;
+  --neutral-600: #737373;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #141414;
+  --neutral-950: #0a0a0a;
+
+  --green-50: #f0fdf4;
+  --green-600: #16a34a;
+  --green-800: #166534;
+
+  --amber-50: #fffbeb;
+  --amber-600: #d97706;
+  --amber-800: #92400e;
+
+  --red-50: #fef2f2;
+  --red-600: #dc2626;
+  --red-800: #991b1b;
+}
+
+/* ─── Tier 2: Semantic tokens (light / default) ──────────────────────────── */
+:root {
+  /* Backgrounds */
+  --color-bg-page: var(--neutral-50);
+  --color-bg-surface: var(--white);
+  --color-bg-subtle: var(--neutral-100);
+  --color-bg-tooltip: var(--neutral-950);
+
+  /* Text */
+  --color-text-primary: var(--slate-900);
+  --color-text-secondary: var(--slate-600);
+  --color-text-tertiary: var(--slate-400);
+  --color-text-inverse: var(--white);
+
+  /* Accent — the single accent */
+  --color-accent: var(--blue-800);
+  --color-accent-hover: var(--blue-700);
+  --color-accent-subtle: var(--blue-50);
+
+  /* Status — used only for state, never decoration.
+     -subtle = low-saturation fill, -strong = readable text on the fill. */
+  --color-success: var(--green-600);
+  --color-success-subtle: var(--green-50);
+  --color-success-strong: var(--green-800);
+
+  --color-warning: var(--amber-600);
+  --color-warning-subtle: var(--amber-50);
+  --color-warning-strong: var(--amber-800);
+
+  --color-danger: var(--red-600);
+  --color-danger-subtle: var(--red-50);
+  --color-danger-strong: var(--red-800);
+
+  /* Info shares the accent — active processing is the expected productive state. */
+  --color-info: var(--color-accent);
+  --color-info-subtle: var(--blue-50);
+  --color-info-strong: var(--blue-900);
+
+  /* Borders */
+  --color-border: var(--slate-200);
+  --color-border-strong: var(--slate-300);
+
+  /* Table header */
+  --color-table-header-bg: var(--neutral-50);
+
+  /* Focus ring — 2px accent at 30% alpha */
+  --color-ring: color-mix(in srgb, var(--color-accent) 30%, transparent);
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --font-size-xs: 12px; /* caption */
+  --font-size-sm: 13px; /* table cells, labels, badges */
+  --font-size-base: 14px; /* body, button text */
+  --font-size-md: 16px; /* emphasized body, h3 */
+  --font-size-lg: 18px; /* section titles, h2 */
+  --font-size-xl: 22px; /* page titles, h1 */
+  --font-size-2xl: 28px; /* dashboard stat numbers */
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ─── Dark mode — override Tier 2 semantic tokens only ───────────────────── */
+[data-theme="dark"] {
+  --color-bg-page: var(--neutral-950);
+  --color-bg-surface: var(--neutral-900);
+  --color-bg-subtle: var(--neutral-800);
+  --color-bg-tooltip: var(--neutral-950);
+
+  --color-text-primary: var(--neutral-50);
+  --color-text-secondary: var(--neutral-400);
+  --color-text-tertiary: var(--neutral-600);
+
+  --color-accent: var(--blue-500);
+  --color-accent-hover: var(--blue-400);
+  /* Derived so the active-nav / selected-row tint reads correctly on dark surfaces */
+  --color-accent-subtle: color-mix(in srgb, var(--color-accent) 18%, var(--color-bg-surface));
+
+  --color-border: var(--neutral-800);
+  --color-border-strong: var(--neutral-700);
+
+  --color-table-header-bg: var(--neutral-900);
+
+  /* Status hues hold; their subtle fills are re-derived for dark surfaces so
+     badge text (the -strong tokens) stays legible. */
+  --color-success-subtle: color-mix(in srgb, var(--color-success) 18%, var(--color-bg-surface));
+  --color-warning-subtle: color-mix(in srgb, var(--color-warning) 18%, var(--color-bg-surface));
+  --color-danger-subtle: color-mix(in srgb, var(--color-danger) 18%, var(--color-bg-surface));
+  --color-info-subtle: color-mix(in srgb, var(--color-info) 18%, var(--color-bg-surface));
+}
