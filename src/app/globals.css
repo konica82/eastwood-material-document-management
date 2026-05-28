@@ -1,10 +1,169 @@
 /* Design tokens first — defines the CSS custom properties everything else maps to. */
 @import "../styles/tokens.css";
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-/* Tailwind v4: load the legacy-style config that maps utility classes to tokens. */
-@config "../../tailwind.config.ts";
+/* Dark variant — keyed to data-theme="dark" set by ThemeProvider, not the .dark class. */
+@custom-variant dark (&:is([data-theme="dark"] *));
 
+/* ─── Tailwind v4 theme ────────────────────────────────────────────────────────
+   Maps utility classes to our design tokens.
+   Declared AFTER the shadcn import so our values win on name collisions
+   (--color-border, --color-accent, --radius-sm/md/lg, --color-ring, etc.).
+   "inline" = Tailwind inlines the var() reference; no extra CSS variable layer.
+─────────────────────────────────────────────────────────────────────────────── */
+@theme inline {
+  /* ── Backgrounds ── */
+  --color-page:    var(--color-bg-page);
+  --color-surface: var(--color-bg-surface);
+  --color-subtle:  var(--color-bg-subtle);
+  --color-tooltip: var(--color-bg-tooltip);
+
+  /* ── Text ── */
+  --color-primary:   var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-tertiary:  var(--color-text-tertiary);
+  --color-inverse:   var(--color-text-inverse);
+
+  /* ── Accent ── */
+  --color-accent:        var(--color-accent);
+  --color-accent-hover:  var(--color-accent-hover);
+  --color-accent-subtle: var(--color-accent-subtle);
+
+  /* ── Status ── */
+  --color-success:        var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-success-strong: var(--color-success-strong);
+  --color-success-muted:  var(--color-success-muted);
+
+  --color-warning:        var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-warning-strong: var(--color-warning-strong);
+  --color-warning-muted:  var(--color-warning-muted);
+
+  --color-danger:        var(--color-danger);
+  --color-danger-subtle: var(--color-danger-subtle);
+  --color-danger-strong: var(--color-danger-strong);
+  --color-danger-muted:  var(--color-danger-muted);
+
+  --color-info:        var(--color-info);
+  --color-info-subtle: var(--color-info-subtle);
+  --color-info-strong: var(--color-info-strong);
+  --color-info-muted:  var(--color-info-muted);
+
+  /* ── Borders ── */
+  --color-border:        var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  /* ── Focus ring ── */
+  --color-ring: var(--color-ring);
+
+  /* ── Typography ── */
+  --font-sans:    var(--font-sans);
+  --font-mono:    var(--font-mono);
+  --font-heading: var(--font-sans);   /* headings use Inter, not mono */
+
+  --text-xs:   var(--font-size-xs);
+  --text-sm:   var(--font-size-sm);
+  --text-base: var(--font-size-base);
+  --text-md:   var(--font-size-md);
+  --text-lg:   var(--font-size-lg);
+  --text-xl:   var(--font-size-xl);
+  --text-2xl:  var(--font-size-2xl);
+
+  /* ── Border radius — override shadcn's calc(var(--radius) * N) values ── */
+  --radius-sm:   var(--radius-sm);    /* 4px */
+  --radius-md:   var(--radius-md);    /* 6px */
+  --radius-lg:   var(--radius-lg);    /* 12px */
+  --radius-xl:   var(--radius-lg);    /* no xl in our scale → lg */
+  --radius-2xl:  var(--radius-lg);
+  --radius-3xl:  var(--radius-full);
+  --radius-4xl:  var(--radius-full);
+  --radius-full: var(--radius-full);  /* 9999px */
+
+  /* ── Motion ── */
+  --duration-fast:   var(--duration-fast);
+  --duration-normal: var(--duration-normal);
+  --ease-out:        var(--ease-out);
+}
+
+/* ─── Shadcn component variables — bridged to our design tokens ───────────────
+   Shadcn component internals reference these directly (not via Tailwind utilities),
+   so they must exist and must resolve to our palette — not the init-generated
+   oklch placeholders.
+─────────────────────────────────────────────────────────────────────────────── */
+:root {
+  --background:          var(--color-bg-surface);
+  --foreground:          var(--color-text-primary);
+  --card:                var(--color-bg-surface);
+  --card-foreground:     var(--color-text-primary);
+  --popover:             var(--color-bg-surface);
+  --popover-foreground:  var(--color-text-primary);
+  --primary:             var(--color-accent);
+  --primary-foreground:  var(--color-text-inverse);
+  --secondary:           var(--color-bg-subtle);
+  --secondary-foreground: var(--color-text-primary);
+  --muted:               var(--color-bg-subtle);
+  --muted-foreground:    var(--color-text-secondary);
+  --accent:              var(--color-accent-subtle);
+  --accent-foreground:   var(--color-accent);
+  --destructive:         var(--color-danger);
+  --border:              var(--color-border);
+  --input:               var(--color-border);
+  --ring:                var(--color-ring);
+  /* shadcn's --radius is used in its own calc() expressions — map to our base */
+  --radius:              var(--radius-md);
+
+  /* Chart — map to our status palette */
+  --chart-1: var(--color-accent);
+  --chart-2: var(--color-success);
+  --chart-3: var(--color-warning);
+  --chart-4: var(--color-danger);
+  --chart-5: var(--color-text-tertiary);
+
+  /* Sidebar — map to our surface/border tokens */
+  --sidebar:                   var(--color-bg-surface);
+  --sidebar-foreground:        var(--color-text-primary);
+  --sidebar-primary:           var(--color-accent);
+  --sidebar-primary-foreground: var(--color-text-inverse);
+  --sidebar-accent:            var(--color-bg-subtle);
+  --sidebar-accent-foreground: var(--color-text-primary);
+  --sidebar-border:            var(--color-border);
+  --sidebar-ring:              var(--color-ring);
+}
+
+[data-theme="dark"] {
+  --background:          var(--color-bg-surface);
+  --foreground:          var(--color-text-primary);
+  --card:                var(--color-bg-surface);
+  --card-foreground:     var(--color-text-primary);
+  --popover:             var(--color-bg-surface);
+  --popover-foreground:  var(--color-text-primary);
+  --primary:             var(--color-accent);
+  --primary-foreground:  var(--color-text-inverse);
+  --secondary:           var(--color-bg-subtle);
+  --secondary-foreground: var(--color-text-primary);
+  --muted:               var(--color-bg-subtle);
+  --muted-foreground:    var(--color-text-secondary);
+  --accent:              var(--color-accent-subtle);
+  --accent-foreground:   var(--color-accent);
+  --destructive:         var(--color-danger);
+  --border:              var(--color-border);
+  --input:               var(--color-border);
+  --ring:                var(--color-ring);
+
+  --sidebar:                   var(--color-bg-surface);
+  --sidebar-foreground:        var(--color-text-primary);
+  --sidebar-primary:           var(--color-accent);
+  --sidebar-primary-foreground: var(--color-text-inverse);
+  --sidebar-accent:            var(--color-bg-subtle);
+  --sidebar-accent-foreground: var(--color-text-primary);
+  --sidebar-border:            var(--color-border);
+  --sidebar-ring:              var(--color-ring);
+}
+
+/* ─── Global base styles ──────────────────────────────────────────────────── */
 html {
   height: 100%;
 }
@@ -25,7 +184,7 @@ body {
   to   { opacity: 1; transform: translateY(0)   scale(1);    }
 }
 
-/* The design mandates respecting reduced motion app-wide. */
+/* Respect reduced motion app-wide. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -34,5 +193,16 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  /* Focus rings use our token-based ring color. */
+  *:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 }

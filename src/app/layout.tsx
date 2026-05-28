@@ -5,16 +5,14 @@ import { PlantProvider } from '@/contexts/PlantContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { cn } from "@/lib/utils";
 
 const inter = Inter({
   variable: '--font-sans',
   subsets: ['latin', 'vietnamese'],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-mono',
-  subsets: ['latin'],
-});
+const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'});
 
 export const metadata: Metadata = {
   title: 'Hồ sơ nguyên liệu',
@@ -28,7 +26,7 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      className={cn(inter.variable, jetbrainsMono.variable)}
     >
       <body>
         <PlantProvider>

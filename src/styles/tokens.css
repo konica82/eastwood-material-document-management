@@ -85,6 +85,14 @@
   --color-info-subtle: var(--blue-50);
   --color-info-strong: var(--blue-900);
 
+  /* Status muted — light-but-visible border tints for status cards.
+     Sits between -subtle (very light fill) and the full status color.
+     Used as 1px border on WeighCard, checklist items, and status summary cards. */
+  --color-success-muted: color-mix(in srgb, var(--color-success) 30%, var(--color-bg-surface));
+  --color-warning-muted: color-mix(in srgb, var(--color-warning) 30%, var(--color-bg-surface));
+  --color-danger-muted:  color-mix(in srgb, var(--color-danger)  30%, var(--color-bg-surface));
+  --color-info-muted:    color-mix(in srgb, var(--color-info)    30%, var(--color-bg-surface));
+
   /* Borders */
   --color-border: var(--slate-200);
   --color-border-strong: var(--slate-300);
@@ -155,6 +163,12 @@
      badge text (the -strong tokens) stays legible. */
   --color-success-subtle: color-mix(in srgb, var(--color-success) 18%, var(--color-bg-surface));
   --color-warning-subtle: color-mix(in srgb, var(--color-warning) 18%, var(--color-bg-surface));
-  --color-danger-subtle: color-mix(in srgb, var(--color-danger) 18%, var(--color-bg-surface));
-  --color-info-subtle: color-mix(in srgb, var(--color-info) 18%, var(--color-bg-surface));
+  --color-danger-subtle:  color-mix(in srgb, var(--color-danger)  18%, var(--color-bg-surface));
+  --color-info-subtle:    color-mix(in srgb, var(--color-info)    18%, var(--color-bg-surface));
+
+  /* Muted borders — re-derived so the 30% mix uses the dark surface. */
+  --color-success-muted: color-mix(in srgb, var(--color-success) 30%, var(--color-bg-surface));
+  --color-warning-muted: color-mix(in srgb, var(--color-warning) 30%, var(--color-bg-surface));
+  --color-danger-muted:  color-mix(in srgb, var(--color-danger)  30%, var(--color-bg-surface));
+  --color-info-muted:    color-mix(in srgb, var(--color-info)    30%, var(--color-bg-surface));
 }

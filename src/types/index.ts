@@ -29,6 +29,13 @@ export type VehicleType =
 /** Supplier / driver entity type — determines which ID field is required. */
 export type EntityType = "Công ty" | "Cá nhân";
 
+/**
+ * Legal form sub-type for company suppliers.
+ * Drives the filter chips on the supplier list (HTX / CP / TNHH).
+ * Individuals are always "Cá nhân".
+ */
+export type LoaiHinhCongTy = "HTX" | "CP" | "TNHH" | "Cá nhân";
+
 export type DeforestationRiskStatus =
   | "Thấp"        // low
   | "Trung bình"  // medium
@@ -96,11 +103,17 @@ export interface Supplier {
   ten: string;
   /** Determines which identifier is required: MST for company, CCCD for individual. */
   hinh_thuc: EntityType;
+  /** Legal-form sub-type used for filter chips. */
+  loai_hinh: LoaiHinhCongTy;
   /** Tax code (MST) for companies; national ID (CCCD) for individuals. */
   cccd_mst: string;
   so_dien_thoai?: string;
+  /** Legal representative name (for companies). */
+  nguoi_dai_dien?: string;
   dia_chi: string;       // address
   nha_may: string;       // plant ID
+  /** Forest / timber certification label, e.g. "FSC-CoC". */
+  chung_chi?: string;
   /** Populated only on detail views. */
   secondarySuppliers?: SecondarySupplier[];
   created_at: string;
@@ -113,6 +126,12 @@ export interface SecondarySupplier {
   hinh_thuc: EntityType;
   cccd_mst: string;
   so_dien_thoai?: string;
+  /** Ownership share percentage (0–100) within the primary supplier. */
+  co_phan_phan_tram?: number;
+  /** Number of forest plots contributed by this member. */
+  lo_rung?: number;
+  /** Date this member joined the cooperative (ISO 8601). */
+  ngay_tham_gia?: string;
   nha_cung_cap_chinh_id: string; // FK to primary Supplier
   /** Populated on detail views. */
   nha_cung_cap_chinh?: Supplier | null;

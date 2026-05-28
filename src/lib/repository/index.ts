@@ -22,9 +22,15 @@ import type {
   DashboardRepository,
   UserRepository,
 } from "./types";
-import { mockMaterialRepository } from "./mock/material";
-import { mockSupplierRepository } from "./mock/supplier";
-import { mockUserRepository } from "./mock/user";
+import { mockCargoRepository }       from "./mock/cargo";
+import { mockDriverRepository }       from "./mock/driver";
+import { mockWeighingSlipRepository } from "./mock/weighing-slip";
+import { mockMaterialRepository }     from "./mock/material";
+import { mockSupplierRepository }     from "./mock/supplier";
+import { mockPlotRepository }         from "./mock/plot";
+import { mockActivityLogRepository }  from "./mock/activity-log";
+import { mockDashboardRepository }    from "./mock/dashboard";
+import { mockUserRepository }         from "./mock/user";
 
 // ─── Entity name registry ─────────────────────────────────────────────────────
 
@@ -81,31 +87,13 @@ export function getRepository(entity: EntityName): RepositoryMap[EntityName] {
   // compile time. Every method throws at runtime until the adapter is wired.
   switch (entity) {
     case "cargo":
-      return {
-        list: () => { throw NOT_IMPLEMENTED("cargo"); },
-        get: () => { throw NOT_IMPLEMENTED("cargo"); },
-        update: () => { throw NOT_IMPLEMENTED("cargo"); },
-        create: () => { throw NOT_IMPLEMENTED("cargo"); },
-        updateStatus: () => { throw NOT_IMPLEMENTED("cargo"); },
-        completeDossier: () => { throw NOT_IMPLEMENTED("cargo"); },
-      } satisfies CargoRepository;
+      return mockCargoRepository;
 
     case "weighing-slip":
-      return {
-        list: () => { throw NOT_IMPLEMENTED("weighing-slip"); },
-        get: () => { throw NOT_IMPLEMENTED("weighing-slip"); },
-        update: () => { throw NOT_IMPLEMENTED("weighing-slip"); },
-        recordWeighIn: () => { throw NOT_IMPLEMENTED("weighing-slip"); },
-        recordWeighOut: () => { throw NOT_IMPLEMENTED("weighing-slip"); },
-      } satisfies WeighingSlipRepository;
+      return mockWeighingSlipRepository;
 
     case "driver":
-      return {
-        list: () => { throw NOT_IMPLEMENTED("driver"); },
-        get: () => { throw NOT_IMPLEMENTED("driver"); },
-        update: () => { throw NOT_IMPLEMENTED("driver"); },
-        findByPlate: () => { throw NOT_IMPLEMENTED("driver"); },
-      } satisfies DriverRepository;
+      return mockDriverRepository;
 
     case "material":
       return mockMaterialRepository;
@@ -114,23 +102,13 @@ export function getRepository(entity: EntityName): RepositoryMap[EntityName] {
       return mockSupplierRepository;
 
     case "plot":
-      return {
-        list: () => { throw NOT_IMPLEMENTED("plot"); },
-        get: () => { throw NOT_IMPLEMENTED("plot"); },
-        update: () => { throw NOT_IMPLEMENTED("plot"); },
-        getWithDetails: () => { throw NOT_IMPLEMENTED("plot"); },
-      } satisfies PlotRepository;
+      return mockPlotRepository;
 
     case "activity-log":
-      return {
-        list: () => { throw NOT_IMPLEMENTED("activity-log"); },
-        append: () => { throw NOT_IMPLEMENTED("activity-log"); },
-      } satisfies ActivityLogRepository;
+      return mockActivityLogRepository;
 
     case "dashboard":
-      return {
-        getMetrics: () => { throw NOT_IMPLEMENTED("dashboard"); },
-      } satisfies DashboardRepository;
+      return mockDashboardRepository;
 
     case "user":
       return mockUserRepository;

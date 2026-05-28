@@ -1,0 +1,439 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { Search, Upload, Plus, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
+import { usePlant } from '@/contexts/PlantContext';
+import { getRepository } from '@/lib/repository';
+import { fmtTime } from '@/lib/fmt';
+import type { Cargo, CargoStatus } from '@/types/index';
+
+// ─── Types & constants ────────────────────────────────────────────────────────
+
+type FilterKey = 'all' | CargoStatus;
+
+const STATUS_FILTER_CHIPS: Array<{ key: FilterKey; label: string; tone?: 'warning' | 'info' | 'success' | 'danger' }> = [
+  { key: 'all',         label: 'Tất cả' },
+  { key: 'Chờ lượt',   label: 'Chờ lượt',   tone: 'warning' },
+  { key: 'Đang xử lý', label: 'Đang xử lý', tone: 'info' },
+  { key: 'Hoàn thành', label: 'Hoàn thành', tone: 'success' },
+  { key: 'Hủy lượt',   label: 'Hủy lượt',   tone: 'danger' },
+];
+
+const TONE_FG: Record<string, string> = {
+  warning: 'var(--color-warning)',
+  info:    'var(--color-info)',
+  success: 'var(--color-success)',
+  danger:  'var(--color-danger)',
+};
+const TONE_BG: Record<string, string> = {
+  warning: 'var(--color-warning-subtle)',
+  info:    'var(--color-info-subtle)',
+  success: 'var(--color-success-subtle)',
+  danger:  'var(--color-danger-subtle)',
+};
+const TONE_BORDER: Record<string, string> = {
+  warning: 'var(--color-warning-muted)',
+  info:    'var(--color-info-muted)',
+  success: 'var(--color-success-muted)',
+  danger:  'var(--color-danger-muted)',
+};
+
+const STATUS_COLORS: Record<CargoStatus, { bg: string; fg: string; border: string }> = {
+  'Chờ lượt':   { bg: 'var(--color-warning-subtle)',  fg: 'var(--color-warning)',  border: 'var(--color-warning-muted)' },
+  'Đang xử lý': { bg: 'var(--color-info-subtle)',     fg: 'var(--color-info)',     border: 'var(--color-info-muted)' },
+  'Hoàn thành': { bg: 'var(--color-success-subtle)',  fg: 'var(--color-success)',  border: 'var(--color-success-muted)' },
+  'Hủy lượt':   { bg: 'var(--color-danger-subtle)',   fg: 'var(--color-danger)',   border: 'var(--color-danger-muted)' },
+};
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function CargoPage() {
+  const { activePlantId } = usePlant();
+  const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterKey>('all');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'created_at', dir: 'desc' });
+
+  useEffect(() => {
+    setLoading(true);
+    getRepository('cargo').list(activePlantId).then(list => {
+      setCargos(list);
+      setLoading(false);
+    });
+  }, [activePlantId]);
+
+  const counts = useMemo(() => {
+    const m: Record<string, number> = { all: cargos.length };
+    for (const c of cargos) m[c.trang_thai] = (m[c.trang_thai] ?? 0) + 1;
+    return m;
+  }, [cargos]);
+
+  const filtered = useMemo(() => {
+    let rows = [...cargos];
+    if (filter !== 'all') rows = rows.filter(c => c.trang_thai === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      rows = rows.filter(c =>
+        c.so_xe.toLowerCase().includes(q) ||
+        (c.tai_xe?.ten ?? '').toLowerCase().includes(q) ||
+        (c.nguyen_lieu?.ten ?? '').toLowerCase().includes(q) ||
+        (c.nha_cung_cap?.ten ?? '').toLowerCase().includes(q) ||
+        (c.so_phieu_can ?? '').toLowerCase().includes(q),
+      );
+    }
+    rows.sort((a, b) => {
+      let va: string = '';
+      let vb: string = '';
+      switch (sortBy.col) {
+        case 'so_xe':      va = a.so_xe;      vb = b.so_xe;      break;
+        case 'trang_thai': va = a.trang_thai; vb = b.trang_thai; break;
+        default:           va = a.created_at; vb = b.created_at; break;
+      }
+      const r = va < vb ? -1 : va > vb ? 1 : 0;
+      return sortBy.dir === 'asc' ? r : -r;
+    });
+    return rows;
+  }, [cargos, filter, search, sortBy]);
+
+  function toggleSort(col: string) {
+    setSortBy(s => s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' });
+  }
+
+  return (
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* Page header */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Xe hàng</div>
+          <h1 style={{ fontSize: 22, fontWeight: 500, margin: '4px 0 0', color: 'var(--color-text-primary)' }}>
+            Danh sách lượt cân
+          </h1>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={secBtnStyle}>
+            <Upload size={14} strokeWidth={1.75} />
+            Nhập từ Excel
+          </button>
+          <button style={primBtnStyle}>
+            <Plus size={14} strokeWidth={2} />
+            Tạo lượt cân
+          </button>
+        </div>
+      </div>
+
+      {/* Table card */}
+      <div style={{
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)',
+        background: 'var(--color-bg-surface)',
+        overflow: 'hidden',
+      }}>
+        {/* Filter + search row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '12px 16px',
+          borderBottom: '1px solid var(--color-border)',
+          flexWrap: 'wrap',
+        }}>
+          {STATUS_FILTER_CHIPS.map(chip => (
+            <FilterChip
+              key={chip.key}
+              active={filter === chip.key}
+              label={chip.label}
+              count={counts[chip.key] ?? 0}
+              tone={chip.tone}
+              onClick={() => setFilter(chip.key)}
+            />
+          ))}
+          <div style={{ flex: 1, minWidth: 8 }} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                placeholder="Tìm biển số, tài xế, NCC..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{
+                  height: 32, paddingLeft: 28, paddingRight: 10,
+                  borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)',
+                  fontSize: 'var(--font-size-sm)', outline: 'none', width: 240,
+                }}
+              />
+            </div>
+            <button style={secBtnSmStyle}>
+              <Calendar size={13} strokeWidth={1.75} />
+              26/05 – 27/05
+            </button>
+            <button style={secBtnSmStyle}>
+              <SlidersHorizontal size={13} strokeWidth={1.75} />
+              Bộ lọc
+            </button>
+          </div>
+        </div>
+
+        {/* Table or loading */}
+        {loading ? (
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>Đang tải...</div>
+        ) : (
+          <>
+            <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'var(--color-table-header-bg)' }}>
+                    <SortTh col="so_xe"        sort={sortBy} onSort={toggleSort} width={140}>Biển số</SortTh>
+                    <SortTh col="tai_xe"       sort={sortBy} onSort={toggleSort}>Tài xế</SortTh>
+                    <SortTh col="nguyen_lieu"  sort={sortBy} onSort={toggleSort}>Nguyên liệu</SortTh>
+                    <SortTh col="nha_cung_cap" sort={sortBy} onSort={toggleSort}>Nhà cung cấp chính</SortTh>
+                    <th style={{ padding: '10px 14px', textAlign: 'right', fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', width: 120 }}>Khối lượng</th>
+                    <SortTh col="trang_thai"  sort={sortBy} onSort={toggleSort} width={130}>Trạng thái</SortTh>
+                    <SortTh col="created_at"  sort={sortBy} onSort={toggleSort} width={90} align="right">Tạo lúc</SortTh>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c, i) => (
+                    <CargoRow key={c.id} cargo={c} isLast={i === filtered.length - 1} />
+                  ))}
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '60px 20px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                          <Truck size={28} style={{ color: 'var(--color-text-tertiary)' }} />
+                          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, margin: 0 }}>
+                            Không có lượt cân nào khớp với bộ lọc hiện tại.
+                          </p>
+                          <button style={{ ...secBtnSmStyle, marginTop: 4 }} onClick={() => { setFilter('all'); setSearch(''); }}>
+                            Xóa bộ lọc
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination footer */}
+            <div style={{
+              padding: '10px 16px',
+              borderTop: '1px solid var(--color-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: 12, color: 'var(--color-text-secondary)',
+            }}>
+              <span>
+                Hiển thị{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{filtered.length}</span>
+                {' '}trên{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{cargos.length}</span>
+                {' '}lượt cân
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button style={{ ...secBtnSmStyle, opacity: 0.5, cursor: 'default' }} disabled>
+                  <ChevronLeft size={13} strokeWidth={1.75} />
+                  Trước
+                </button>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>1 / 1</span>
+                <button style={{ ...secBtnSmStyle, opacity: 0.5, cursor: 'default' }} disabled>
+                  Sau
+                  <ChevronRight size={13} strokeWidth={1.75} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Table row ────────────────────────────────────────────────────────────────
+
+function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
+  const [hovered, setHovered] = useState(false);
+  const net = c.phieu_can?.dlc_trong_luong_hang;
+  const grossKg = c.phieu_can?.dlc_can_vao;
+  const hasSecondary = !!c.nha_cung_cap_phu_id;
+  const col = STATUS_COLORS[c.trang_thai];
+
+  return (
+    <tr
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderTop: '1px solid var(--color-border)',
+        background: hovered ? 'var(--color-bg-subtle)' : 'transparent',
+        borderBottom: isLast ? 'none' : undefined,
+        cursor: 'pointer',
+        transition: 'background 100ms ease-out',
+      }}
+    >
+      {/* Biển số */}
+      <td style={tdStyle()}>
+        <Link
+          href={`/cargo/${c.id}`}
+          style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
+        >
+          {c.so_xe}
+        </Link>
+      </td>
+
+      {/* Tài xế: name + CCCD */}
+      <td style={tdStyle()}>
+        <div style={{ color: 'var(--color-text-primary)', fontSize: 13 }}>{c.tai_xe?.ten ?? '—'}</div>
+        {c.tai_xe?.cccd && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
+            {c.tai_xe.cccd}
+          </div>
+        )}
+      </td>
+
+      {/* Nguyên liệu */}
+      <td style={tdStyle()}>{c.nguyen_lieu?.ten ?? '—'}</td>
+
+      {/* Nhà cung cấp: name + NCC phụ count */}
+      <td style={tdStyle()}>
+        <div style={{ color: 'var(--color-text-primary)', fontSize: 13 }}>{c.nha_cung_cap?.ten ?? '—'}</div>
+        {hasSecondary && (
+          <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>+ 1 NCC phụ</div>
+        )}
+      </td>
+
+      {/* Khối lượng — right aligned */}
+      <td style={tdStyle('right')}>
+        {net != null ? (
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+            {net.toLocaleString('vi-VN')}{' '}
+            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 11 }}>kg</span>
+          </span>
+        ) : grossKg ? (
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+            {grossKg.toLocaleString('vi-VN')}{' '}
+            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 11 }}>kg vào</span>
+          </span>
+        ) : (
+          <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+        )}
+      </td>
+
+      {/* Trạng thái */}
+      <td style={tdStyle()}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          fontSize: 12, fontWeight: 500,
+          padding: '2px 8px', borderRadius: 9999,
+          background: col.bg, color: col.fg, border: `1px solid ${col.border}`,
+          whiteSpace: 'nowrap',
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: col.fg, flexShrink: 0 }} />
+          {c.trang_thai}
+        </span>
+      </td>
+
+      {/* Tạo lúc — time only, right aligned */}
+      <td style={tdStyle('right')}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          {fmtTime(c.created_at)}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+// ─── Shared primitives ────────────────────────────────────────────────────────
+
+function FilterChip({ active, label, count, tone, onClick }: {
+  active: boolean; label: string; count: number;
+  tone?: 'warning' | 'info' | 'success' | 'danger';
+  onClick: () => void;
+}) {
+  const fg     = tone ? TONE_FG[tone]     : 'var(--color-accent)';
+  const bg     = tone ? TONE_BG[tone]     : 'var(--color-accent-subtle)';
+  const border = tone ? TONE_BORDER[tone] : 'var(--color-accent)';
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        height: 28, padding: '0 10px',
+        borderRadius: 9999,
+        border: active ? `1.5px solid ${border}` : '1.5px solid var(--color-border)',
+        background: active ? bg : 'transparent',
+        color: active ? fg : 'var(--color-text-secondary)',
+        fontSize: 13, fontWeight: active ? 500 : 400,
+        cursor: 'pointer',
+        transition: 'all 100ms ease-out',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {tone && (
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: active ? fg : 'var(--color-text-tertiary)', flexShrink: 0 }} />
+      )}
+      {label}
+      <span style={{
+        fontSize: 11, fontWeight: 500, minWidth: 16, textAlign: 'center',
+        color: active ? fg : 'var(--color-text-tertiary)',
+        background: active ? 'transparent' : 'var(--color-bg-subtle)',
+        borderRadius: 9999, padding: '0 5px',
+      }}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function SortTh({ col, sort, onSort, width, align = 'left', children }: {
+  col: string; sort: { col: string; dir: string }; onSort: (col: string) => void;
+  width?: number; align?: 'left' | 'right'; children: React.ReactNode;
+}) {
+  const active = sort.col === col;
+  return (
+    <th
+      onClick={() => onSort(col)}
+      style={{
+        padding: '10px 14px', textAlign: align,
+        fontSize: 12, fontWeight: 500,
+        color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+        whiteSpace: 'nowrap', width, cursor: 'pointer', userSelect: 'none',
+      }}
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+        {children}
+        {active && <span style={{ fontSize: 10 }}>{sort.dir === 'asc' ? '↑' : '↓'}</span>}
+      </span>
+    </th>
+  );
+}
+
+function tdStyle(align: 'left' | 'right' = 'left'): React.CSSProperties {
+  return { padding: '11px 14px', verticalAlign: 'middle', textAlign: align };
+}
+
+// ─── Style constants ──────────────────────────────────────────────────────────
+
+const secBtnStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  height: 34, padding: '0 12px',
+  borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+  background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)',
+  fontSize: 'var(--font-size-sm)', cursor: 'pointer',
+};
+
+const primBtnStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  height: 34, padding: '0 14px',
+  borderRadius: 'var(--radius-md)', border: 'none',
+  background: 'var(--color-accent)', color: 'var(--color-text-inverse)',
+  fontSize: 'var(--font-size-sm)', fontWeight: 500, cursor: 'pointer',
+};
+
+const secBtnSmStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  height: 30, padding: '0 10px',
+  borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+  background: 'var(--color-bg-surface)', color: 'var(--color-text-secondary)',
+  fontSize: 12, cursor: 'pointer',
+};
