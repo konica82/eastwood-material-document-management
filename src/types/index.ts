@@ -245,6 +245,28 @@ export interface PlotRegistry {
   nha_may: string;            // plant ID
   lat: number | null;         // centroid latitude
   lng: number | null;         // centroid longitude
+
+  // ── Location detail ──────────────────────────────────────────────────────────
+  commune: string | null;     // Xã
+  district: string | null;    // Huyện
+  province: string | null;    // Tỉnh
+
+  // ── Forest lifecycle ─────────────────────────────────────────────────────────
+  planted_at: string | null;      // ISO date — when seedlings were planted
+  harvest_plan: string | null;    // ISO date — planned harvest date
+  rotation_years: number | null;  // full harvest cycle in years
+  density_per_ha: number | null;  // trees per hectare at planting
+  prev_harvests: number;          // number of completed prior harvests
+
+  // ── Terrain ───────────────────────────────────────────────────────────────────
+  elevation_m: number | null;     // metres above sea level
+  slope_deg: number | null;       // slope in degrees
+  soil_type: string | null;       // soil classification description
+
+  // ── Certification ─────────────────────────────────────────────────────────────
+  certificate: string | null;     // e.g. "FSC-CoC", "PEFC", "Không", "Chờ cấp"
+  cert_id: string | null;         // certificate code
+
   created_at: string;
   updated_at: string;
   /** Populated on detail view. */
