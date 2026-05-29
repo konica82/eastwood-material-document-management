@@ -88,6 +88,41 @@ function scheduleFlush(): void {
   }, 200);
 }
 
+/**
+ * Read from a spreadsheet by its direct ID rather than a plantId.
+ * Used for shared spreadsheets not owned by a single plant (e.g. Lô Rừng).
+ */
+export async function readRangeById(
+  spreadsheetId: string,
+  range: string,
+): Promise<string[][]> {
+  const sheets = getSheetsClient();
+  const res = await withRetry(
+    () =>
+      sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+        valueRenderOption: "UNFORMATTED_VALUE",
+        dateTimeRenderOption: "FORMATTED_STRING",
+      }),
+    range,
+    "read",
+  );
+  return (res.data.values ?? []) as string[][];
+}
+
+/** Queue an update by direct spreadsheet ID (for shared sheets). */
+export function queueUpdateById(
+  spreadsheetId: string,
+  range: string,
+  values: string[][],
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    writeQueue.push({ spreadsheetId, range, values, resolve, reject });
+    scheduleFlush();
+  });
+}
+
 /** Queue a range update. Resolves when the batch flush succeeds. */
 export function queueUpdate(
   plantId: string,

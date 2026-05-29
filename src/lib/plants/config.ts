@@ -33,6 +33,12 @@ export interface PlantConfig {
  * Order matters: NMQM is listed first because it is the highest-volume site
  * and the default for new users until they choose a preferred plant.
  */
+/**
+ * Shared spreadsheet for Lô Rừng (Plot Registry) — managed by AppSheet,
+ * used across all plants. Not a real plant; only referenced by the plot adapter.
+ */
+export const LORUNG_SHEETS_ID = process.env.SHEETS_ID_LORUNG ?? "";
+
 export const PLANTS: Record<string, PlantConfig> = {
   NMQM: {
     id: "NMQM",
