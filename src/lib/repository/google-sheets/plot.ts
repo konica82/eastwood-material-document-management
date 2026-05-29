@@ -1,7 +1,8 @@
 /**
- * Google Sheets adapter — PlotRegistry, PlotOwners, PolygonCoordinates, PlotDocuments.
+ * Google Sheets adapter — PlotRegistry, PlotDocuments, PlotOwners, PolygonCoordinates.
+ * All sheets live in the shared Lô Rừng spreadsheet (SHEETS_ID_LORUNG), managed by AppSheet.
  *
- * PlotRegistry columns (A–Z+):
+ * PlotRegistry columns (A–X):
  *   A=PlotID, B=LandTitle, C=AreaHa, D=TreeSpecies, E=DeforestationRiskStatus,
  *   F=ActualQuantityDelivered, G=nha_may, H=lat, I=lng, J=commune, K=district,
  *   L=province, M=planted_at, N=harvest_plan, O=rotation_years, P=density_per_ha,
@@ -22,8 +23,9 @@ import type {
 } from "../../../types/index";
 import type { PlotRepository } from "../types";
 import type { ListQuery } from "../../../types/api";
-import { readRange, cell, numCell, numOrNull, strOrNull, queueUpdate } from "./base";
+import { readRangeById, cell, numCell, numOrNull, strOrNull, queueUpdateById } from "./base";
 import { cache, TTL, cacheKey, listCacheKey } from "../../cache";
+import { LORUNG_SHEETS_ID } from "../../plants/config";
 
 // ─── Column indices ───────────────────────────────────────────────────────────
 
@@ -147,7 +149,7 @@ export function makePlotRepository(plantId: string): PlotRepository {
     const cached = cache.get<PlotRegistry[]>(key);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, `${SHEET}!A2:X`);
+    const rows = await readRangeById(LORUNG_SHEETS_ID, `${SHEET}!A2:X`);
     const plots = rows
       .filter((r) => r[R.PLOT_ID] && r[R.NHA_MAY] === plantId)
       .map(rowToPlot);
@@ -182,7 +184,7 @@ export function makePlotRepository(plantId: string): PlotRepository {
 
     async update(_plantId: string, id: string, patch: Partial<PlotRegistry>): Promise<PlotRegistry> {
       cache.invalidate(`plot:${plantId}:*`);
-      const rows = await readRange(plantId, `${SHEET}!A2:X`);
+      const rows = await readRangeById(LORUNG_SHEETS_ID, `${SHEET}!A2:X`);
       const idx = rows.findIndex((r) => r[R.PLOT_ID] === id);
       if (idx === -1) throw new Error(`Plot ${id} not found`);
 
@@ -191,7 +193,7 @@ export function makePlotRepository(plantId: string): PlotRepository {
         ...patch,
         updated_at: new Date().toISOString(),
       };
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:X${idx + 2}`, [plotToRow(updated)]);
+      await queueUpdateById(LORUNG_SHEETS_ID, `${SHEET}!A${idx + 2}:X${idx + 2}`, [plotToRow(updated)]);
       cache.invalidate(`plot:${plantId}:*`);
       return updated;
     },
@@ -206,9 +208,9 @@ export function makePlotRepository(plantId: string): PlotRepository {
       if (!plot) return null;
 
       const [ownerRows, coordRows, docRows] = await Promise.all([
-        readRange(plantId, `${OWNERS_SHEET}!A2:F`),
-        readRange(plantId, `${POLY_SHEET}!A2:E`),
-        readRange(plantId, `${DOCS_SHEET}!A2:G`),
+        readRangeById(LORUNG_SHEETS_ID, `${OWNERS_SHEET}!A2:F`),
+        readRangeById(LORUNG_SHEETS_ID, `${POLY_SHEET}!A2:E`),
+        readRangeById(LORUNG_SHEETS_ID, `${DOCS_SHEET}!A2:G`),
       ]);
 
       const result: PlotRegistry = {

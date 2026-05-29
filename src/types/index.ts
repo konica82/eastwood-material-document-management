@@ -332,6 +332,7 @@ export interface PlotDocument {
   uploaded_by: string;
 }
 
+
 // ─── Dashboard metrics (Business Rules 7–12) ──────────────────────────────────
 
 /** Computed on demand by the dashboard endpoint, scoped to the active plant. */
