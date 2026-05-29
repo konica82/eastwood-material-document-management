@@ -13,20 +13,23 @@
 import type { Supplier, SecondarySupplier, EntityType, LoaiHinhCongTy } from "../../../types/index";
 import type { SupplierRepository } from "../types";
 import type { ListQuery } from "../../../types/api";
-import { readRange, cell, numOrNull, strOrNull, queueUpdate } from "./base";
+import { readRangeById, cell, numOrNull, strOrNull } from "./base";
 import { cache, TTL, cacheKey, listCacheKey } from "../../cache";
+import { NHA_CUNG_CAP_SHEETS_ID } from "../../plants/config";
 
-// ─── Column indices — primary ─────────────────────────────────────────────────
-
+// Column layout matches actual AppSheet NhaCungCap sheet (A=0 … P=15):
+//   A=id, B=nhom_ncc, C=ten, D=hinh_thuc, E=ten_thuong_goi, F=cccd_mst,
+//   G=dia_chi, H=nguoi_lien_he, I=so_dien_thoai, J=email,
+//   K=nm_giao_hang, L=created_by, M=created_date, N=updated_date, O=updated_by, P=khai_bao_lam_san
 const P = {
-  ID: 0, TEN: 1, HINH_THUC: 2, LOAI_HINH: 3, CCCD_MST: 4,
-  SO_DIEN_THOAI: 5, NGUOI_DAI_DIEN: 6, DIA_CHI: 7, NHA_MAY: 8,
-  CHUNG_CHI: 9, CREATED_AT: 10, UPDATED_AT: 11,
+  ID: 0, NHOM_NCC: 1, TEN: 2, HINH_THUC: 3, TEN_THUONG_GOI: 4,
+  CCCD_MST: 5, DIA_CHI: 6, NGUOI_LIEN_HE: 7, SO_DIEN_THOAI: 8,
+  EMAIL: 9, NM_GIAO_HANG: 10, CREATED_BY: 11, CREATED_AT: 12, UPDATED_AT: 13,
 } as const;
 
-const P_LEN = 12;
+const P_LEN = 16;
 const PRIMARY_SHEET = "NhaCungCap";
-const PRIMARY_RANGE = `${PRIMARY_SHEET}!A2:L`;
+const PRIMARY_RANGE = `${PRIMARY_SHEET}!A2:P`;
 
 // ─── Column indices — secondary ───────────────────────────────────────────────
 
@@ -46,13 +49,13 @@ export function rowToSupplier(row: string[]): Supplier {
     id: cell(row, P.ID),
     ten: cell(row, P.TEN),
     hinh_thuc: cell(row, P.HINH_THUC) as EntityType,
-    loai_hinh: cell(row, P.LOAI_HINH) as LoaiHinhCongTy,
+    loai_hinh: cell(row, P.NHOM_NCC) as LoaiHinhCongTy,
     cccd_mst: cell(row, P.CCCD_MST),
     so_dien_thoai: strOrNull(row, P.SO_DIEN_THOAI) ?? undefined,
-    nguoi_dai_dien: strOrNull(row, P.NGUOI_DAI_DIEN) ?? undefined,
+    nguoi_dai_dien: strOrNull(row, P.NGUOI_LIEN_HE) ?? undefined,
     dia_chi: cell(row, P.DIA_CHI),
-    nha_may: cell(row, P.NHA_MAY),
-    chung_chi: strOrNull(row, P.CHUNG_CHI) ?? undefined,
+    nha_may: cell(row, P.NM_GIAO_HANG),
+    chung_chi: undefined,
     created_at: cell(row, P.CREATED_AT),
     updated_at: cell(row, P.UPDATED_AT),
   };
@@ -63,13 +66,10 @@ export function supplierToRow(s: Supplier): string[] {
   row[P.ID] = s.id;
   row[P.TEN] = s.ten;
   row[P.HINH_THUC] = s.hinh_thuc;
-  row[P.LOAI_HINH] = s.loai_hinh;
   row[P.CCCD_MST] = s.cccd_mst;
   row[P.SO_DIEN_THOAI] = s.so_dien_thoai ?? "";
-  row[P.NGUOI_DAI_DIEN] = s.nguoi_dai_dien ?? "";
+  row[P.NGUOI_LIEN_HE] = s.nguoi_dai_dien ?? "";
   row[P.DIA_CHI] = s.dia_chi;
-  row[P.NHA_MAY] = s.nha_may;
-  row[P.CHUNG_CHI] = s.chung_chi ?? "";
   row[P.CREATED_AT] = s.created_at;
   row[P.UPDATED_AT] = s.updated_at;
   return row;
@@ -105,27 +105,28 @@ export function secondaryToRow(s: SecondarySupplier): string[] {
 
 // ─── Repository ───────────────────────────────────────────────────────────────
 
-export function makeSupplierRepository(plantId: string): SupplierRepository {
+// Suppliers are shared — plant-neutral cache namespace
+const CACHE_NS = "supplier:shared";
+
+export function makeSupplierRepository(_plantId: string): SupplierRepository {
   async function getAllPrimary(): Promise<Supplier[]> {
-    const key = listCacheKey("supplier", plantId, "all");
+    const key = `${CACHE_NS}:list`;
     const cached = cache.get<Supplier[]>(key);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, PRIMARY_RANGE);
-    const suppliers = rows
-      .filter((r) => r[P.ID] && r[P.NHA_MAY] === plantId)
-      .map(rowToSupplier);
+    const rows = await readRangeById(NHA_CUNG_CAP_SHEETS_ID, PRIMARY_RANGE);
+    const suppliers = rows.filter((r) => r[P.ID]).map(rowToSupplier);
 
     cache.set(key, suppliers, TTL.REFERENCE);
     return suppliers;
   }
 
   async function getAllSecondary(): Promise<SecondarySupplier[]> {
-    const key = listCacheKey("secondary-supplier", plantId, "all");
+    const key = `${CACHE_NS}:secondary:list`;
     const cached = cache.get<SecondarySupplier[]>(key);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, SECONDARY_RANGE);
+    const rows = await readRangeById(NHA_CUNG_CAP_SHEETS_ID, SECONDARY_RANGE);
     const items = rows.filter((r) => r[S.ID]).map(rowToSecondary);
 
     cache.set(key, items, TTL.REFERENCE);
@@ -143,7 +144,7 @@ export function makeSupplierRepository(plantId: string): SupplierRepository {
     },
 
     async get(_plantId: string, id: string): Promise<Supplier | null> {
-      const key = cacheKey("supplier", plantId, id);
+      const key = `${CACHE_NS}:${id}`;
       const cached = cache.get<Supplier>(key);
       if (cached) return cached;
 
@@ -153,20 +154,8 @@ export function makeSupplierRepository(plantId: string): SupplierRepository {
       return found;
     },
 
-    async update(_plantId: string, id: string, patch: Partial<Supplier>): Promise<Supplier> {
-      cache.invalidate(`supplier:${plantId}:*`);
-      const rows = await readRange(plantId, PRIMARY_RANGE);
-      const idx = rows.findIndex((r) => r[P.ID] === id);
-      if (idx === -1) throw new Error(`Supplier ${id} not found`);
-
-      const updated: Supplier = {
-        ...rowToSupplier(rows[idx]),
-        ...patch,
-        updated_at: new Date().toISOString(),
-      };
-      await queueUpdate(plantId, `${PRIMARY_SHEET}!A${idx + 2}:L${idx + 2}`, [supplierToRow(updated)]);
-      cache.invalidate(`supplier:${plantId}:*`);
-      return updated;
+    async update(_plantId: string, _id: string, _patch: Partial<Supplier>): Promise<Supplier> {
+      throw new Error("Supplier updates are managed by AppSheet");
     },
 
     async listSecondary(_plantId: string, primarySupplierId: string): Promise<SecondarySupplier[]> {
@@ -179,16 +168,8 @@ export function makeSupplierRepository(plantId: string): SupplierRepository {
       return all.find((s) => s.id === id) ?? null;
     },
 
-    async updateSecondary(_plantId: string, id: string, patch: Partial<SecondarySupplier>): Promise<SecondarySupplier> {
-      cache.invalidate(`secondary-supplier:${plantId}:*`);
-      const rows = await readRange(plantId, SECONDARY_RANGE);
-      const idx = rows.findIndex((r) => r[S.ID] === id);
-      if (idx === -1) throw new Error(`SecondarySupplier ${id} not found`);
-
-      const updated: SecondarySupplier = { ...rowToSecondary(rows[idx]), ...patch };
-      await queueUpdate(plantId, `${SECONDARY_SHEET}!A${idx + 2}:I${idx + 2}`, [secondaryToRow(updated)]);
-      cache.invalidate(`secondary-supplier:${plantId}:*`);
-      return updated;
+    async updateSecondary(_plantId: string, _id: string, _patch: Partial<SecondarySupplier>): Promise<SecondarySupplier> {
+      throw new Error("Secondary supplier updates are managed by AppSheet");
     },
   };
 }

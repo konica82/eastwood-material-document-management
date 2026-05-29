@@ -13,10 +13,16 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const user = await getSessionUser();
     if (!hasPlantAccess(user, plantId)) return forbiddenError();
 
-    const repo = getServerRepository("cargo", plantId);
-    const data = await repo.get(plantId, id);
-    if (!data) return apiError("NOT_FOUND", `Không tìm thấy chuyến hàng ${id}.`, 404);
-    return ok(data);
+    const cargo = await getServerRepository("cargo", plantId).get(plantId, id);
+    if (!cargo) return apiError("NOT_FOUND", `Không tìm thấy chuyến hàng ${id}.`, 404);
+
+    const [material, driver, supplier] = await Promise.all([
+      cargo.nguyen_lieu_id  ? getServerRepository("material", plantId).get(plantId, cargo.nguyen_lieu_id)  : null,
+      cargo.tai_xe_id       ? getServerRepository("driver",   plantId).get(plantId, cargo.tai_xe_id)       : null,
+      cargo.nha_cung_cap_id ? getServerRepository("supplier", plantId).get(plantId, cargo.nha_cung_cap_id) : null,
+    ]);
+
+    return ok({ ...cargo, nguyen_lieu: material, tai_xe: driver, nha_cung_cap: supplier });
   } catch (err) {
     return handleError(err);
   }

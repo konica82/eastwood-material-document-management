@@ -37,8 +37,10 @@ export interface PlantConfig {
  * Shared spreadsheet for Lô Rừng (Plot Registry) — managed by AppSheet,
  * used across all plants. Not a real plant; only referenced by the plot adapter.
  */
-export const LORUNG_SHEETS_ID = process.env.SHEETS_ID_LORUNG ?? "";
-export const NGUYEN_LIEU_SHEETS_ID = process.env.SHEETS_ID_NGUYEN_LIEU ?? "";
+export const LORUNG_SHEETS_ID      = process.env.SHEETS_ID_LORUNG       ?? "";
+export const NGUYEN_LIEU_SHEETS_ID = process.env.SHEETS_ID_NGUYEN_LIEU  ?? "";
+export const NHA_CUNG_CAP_SHEETS_ID = process.env.SHEETS_ID_NHA_CUNG_CAP ?? "";
+export const TAI_XE_SHEETS_ID       = process.env.SHEETS_ID_TAI_XE       ?? "";
 
 export const PLANTS: Record<string, PlantConfig> = {
   NMQM: {

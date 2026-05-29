@@ -11,36 +11,31 @@
  */
 
 import type { Driver, DriverStatus, LicenseClass } from "../../../types/index";
+// DriverStatus and LicenseClass kept for type compatibility in rowToDriver
 import type { DriverRepository } from "../types";
 import type { ListQuery } from "../../../types/api";
-import { readRange, cell, numCell, strOrNull, queueUpdate } from "./base";
+import { readRangeById, cell, strOrNull } from "./base";
 import { cache, TTL, cacheKey, listCacheKey } from "../../cache";
+import { TAI_XE_SHEETS_ID } from "../../plants/config";
 
-// ─── Column indices ───────────────────────────────────────────────────────────
-
+// Column layout matches actual AppSheet TaiXe sheet (A=0 … M=12):
+//   A=id, B=cccd_qrcode_scan, C=ten, D=cccd, E=bang_lai_xe,
+//   F=so_dien_thoai, G=nha_may, H=hinh_cccd, I=hinh_bang_lai_xe,
+//   J=created_by, K=created_date, L=updated_date, M=updated_by
 const COL = {
   ID: 0,
-  TEN: 1,
-  CCCD: 2,
-  SO_DIEN_THOAI: 3,
-  SO_XE: 4,
-  NHA_MAY: 5,
-  GPLX: 6,
-  HANG_GPLX: 7,
-  HAN_GPLX: 8,
-  KHU_VUC: 9,
-  NGAY_VAO: 10,
-  TRANG_THAI: 11,
-  TRIPS30: 12,
-  KG30: 13,
-  TOTAL_TRIPS: 14,
-  CREATED_AT: 15,
-  UPDATED_AT: 16,
+  CCCD_QR: 1,
+  TEN: 2,
+  CCCD: 3,
+  BANG_LAI_XE: 4,
+  SO_DIEN_THOAI: 5,
+  NHA_MAY: 6,
+  CREATED_AT: 10,
+  UPDATED_AT: 11,
 } as const;
 
-const ROW_LEN = 17;
 const SHEET = "TaiXe";
-const RANGE = `${SHEET}!A2:Q`;
+const RANGE = `${SHEET}!A2:M`;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
@@ -50,77 +45,57 @@ export function rowToDriver(row: string[]): Driver {
     ten: cell(row, COL.TEN),
     cccd: cell(row, COL.CCCD),
     so_dien_thoai: cell(row, COL.SO_DIEN_THOAI),
-    so_xe: cell(row, COL.SO_XE),
     nha_may: cell(row, COL.NHA_MAY),
-    completedDeliveries: numCell(row, COL.TOTAL_TRIPS),
-    gplx: strOrNull(row, COL.GPLX) ?? undefined,
-    hang_gplx: (strOrNull(row, COL.HANG_GPLX) as LicenseClass | null) ?? undefined,
-    han_gplx: strOrNull(row, COL.HAN_GPLX) ?? undefined,
-    khu_vuc: strOrNull(row, COL.KHU_VUC) ?? undefined,
-    ngay_vao: strOrNull(row, COL.NGAY_VAO) ?? undefined,
-    trang_thai_tai_xe: (strOrNull(row, COL.TRANG_THAI) as DriverStatus | null) ?? undefined,
-    trips30: numCell(row, COL.TRIPS30),
-    kg30: numCell(row, COL.KG30),
-    totalTrips: numCell(row, COL.TOTAL_TRIPS),
     created_at: cell(row, COL.CREATED_AT),
     updated_at: cell(row, COL.UPDATED_AT),
+    // Fields not in AppSheet schema
+    so_xe: "",
+    gplx: strOrNull(row, COL.BANG_LAI_XE) ?? undefined,
+    hang_gplx: undefined,
+    han_gplx: undefined,
+    khu_vuc: undefined,
+    ngay_vao: undefined,
+    trang_thai_tai_xe: undefined,
+    trips30: 0,
+    kg30: 0,
+    totalTrips: 0,
+    completedDeliveries: 0,
   };
 }
 
-export function driverToRow(d: Driver): string[] {
-  const row: (string | number | null | undefined)[] = new Array(ROW_LEN).fill("");
-  row[COL.ID] = d.id;
-  row[COL.TEN] = d.ten;
-  row[COL.CCCD] = d.cccd;
-  row[COL.SO_DIEN_THOAI] = d.so_dien_thoai;
-  row[COL.SO_XE] = d.so_xe;
-  row[COL.NHA_MAY] = d.nha_may;
-  row[COL.GPLX] = d.gplx ?? "";
-  row[COL.HANG_GPLX] = d.hang_gplx ?? "";
-  row[COL.HAN_GPLX] = d.han_gplx ?? "";
-  row[COL.KHU_VUC] = d.khu_vuc ?? "";
-  row[COL.NGAY_VAO] = d.ngay_vao ?? "";
-  row[COL.TRANG_THAI] = d.trang_thai_tai_xe ?? "";
-  row[COL.TRIPS30] = d.trips30 ?? 0;
-  row[COL.KG30] = d.kg30 ?? 0;
-  row[COL.TOTAL_TRIPS] = d.totalTrips ?? 0;
-  row[COL.CREATED_AT] = d.created_at;
-  row[COL.UPDATED_AT] = d.updated_at;
-  return row.map((v) => (v === null || v === undefined ? "" : String(v)));
-}
 
 // ─── Repository ───────────────────────────────────────────────────────────────
 
-export function makeDriverRepository(plantId: string): DriverRepository {
+// Drivers are shared — plant-neutral cache namespace
+const CACHE_NS = "driver:shared";
+
+export function makeDriverRepository(_plantId: string): DriverRepository {
   async function getAllDrivers(): Promise<Driver[]> {
-    const key = listCacheKey("driver", plantId, "all");
+    const key = `${CACHE_NS}:list`;
     const cached = cache.get<Driver[]>(key);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, RANGE);
-    const drivers = rows
-      .filter((r) => r[COL.ID] && r[COL.NHA_MAY] === plantId)
-      .map(rowToDriver);
+    const rows = await readRangeById(TAI_XE_SHEETS_ID, RANGE);
+    const drivers = rows.filter((r) => r[COL.ID]).map(rowToDriver);
 
     cache.set(key, drivers, TTL.REFERENCE);
     return drivers;
   }
 
   return {
-    async list(_plantId: string, query?: ListQuery): Promise<Driver[]> {
-      const all = await getAllDrivers();
+    async list(plantId: string, query?: ListQuery): Promise<Driver[]> {
+      let all = await getAllDrivers();
+      // Filter to this plant's drivers
+      all = all.filter((d) => !d.nha_may || d.nha_may === plantId);
       if (!query?.search) return all;
       const q = query.search.toLowerCase();
       return all.filter(
-        (d) =>
-          d.ten.toLowerCase().includes(q) ||
-          d.so_xe.toLowerCase().includes(q) ||
-          d.cccd.includes(q),
+        (d) => d.ten.toLowerCase().includes(q) || d.cccd.includes(q),
       );
     },
 
     async get(_plantId: string, id: string): Promise<Driver | null> {
-      const key = cacheKey("driver", plantId, id);
+      const key = `${CACHE_NS}:${id}`;
       const cached = cache.get<Driver>(key);
       if (cached) return cached;
 
@@ -130,21 +105,8 @@ export function makeDriverRepository(plantId: string): DriverRepository {
       return found;
     },
 
-    async update(_plantId: string, id: string, patch: Partial<Driver>): Promise<Driver> {
-      cache.invalidate(`driver:${plantId}:*`);
-      const rows = await readRange(plantId, RANGE);
-      const idx = rows.findIndex((r) => r[COL.ID] === id);
-      if (idx === -1) throw new Error(`Driver ${id} not found`);
-
-      const existing = rowToDriver(rows[idx]);
-      const updated: Driver = {
-        ...existing,
-        ...patch,
-        updated_at: new Date().toISOString(),
-      };
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:Q${idx + 2}`, [driverToRow(updated)]);
-      cache.invalidate(`driver:${plantId}:*`);
-      return updated;
+    async update(_plantId: string, _id: string, _patch: Partial<Driver>): Promise<Driver> {
+      throw new Error("Driver updates are managed by AppSheet");
     },
 
     async findByPlate(_plantId: string, so_xe: string): Promise<Driver | null> {

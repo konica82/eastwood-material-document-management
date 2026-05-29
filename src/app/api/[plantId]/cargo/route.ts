@@ -4,6 +4,7 @@ import { getSessionUser, hasPlantAccess, getPlantRole } from "@/lib/auth";
 import { getServerRepository } from "@/lib/repository/server";
 import { CreateCargoSchema } from "@/lib/schemas/cargo";
 import { createCargo } from "@/lib/services/cargo.service";
+import type { Cargo } from "@/types/index";
 
 type Ctx = { params: Promise<{ plantId: string }> };
 
@@ -22,9 +23,25 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       dateFrom: searchParams.get("dateFrom") ?? undefined,
       dateTo:   searchParams.get("dateTo")   ?? undefined,
     };
-    const repo = getServerRepository("cargo", plantId);
-    const data = await repo.list(plantId, query);
-    return ok(data);
+    const [data, materials, drivers, suppliers] = await Promise.all([
+      getServerRepository("cargo", plantId).list(plantId, query),
+      getServerRepository("material", plantId).list(plantId),
+      getServerRepository("driver",   plantId).list(plantId),
+      getServerRepository("supplier", plantId).list(plantId),
+    ]);
+
+    const matMap = new Map(materials.map((m) => [m.id, m]));
+    const drvMap = new Map(drivers.map((d)   => [d.id, d]));
+    const supMap = new Map(suppliers.map((s)  => [s.id, s]));
+
+    const resolved: Cargo[] = data.map((c) => ({
+      ...c,
+      nguyen_lieu:   matMap.get(c.nguyen_lieu_id)   ?? null,
+      tai_xe:        drvMap.get(c.tai_xe_id)         ?? null,
+      nha_cung_cap:  supMap.get(c.nha_cung_cap_id)   ?? null,
+    }));
+
+    return ok(resolved);
   } catch (err) {
     return handleError(err);
   }
