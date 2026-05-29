@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Building2, User, Pencil, MoreHorizontal,
   Download, Plus, Check, X,
 } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { supplierApi } from '@/lib/api-client';
 import type { Supplier, SecondarySupplier, LoaiHinhCongTy } from '@/types/index';
 
 function fmtDate(iso: string): string {
@@ -30,58 +31,66 @@ export default function SuppliersPage() {
   const { activePlantId, roleAtPlant } = usePlant();
   const canEdit = roleAtPlant(activePlantId) !== 'User';
 
-  // ── Data ──
-  const [primaries, setPrimaries] = useState<Supplier[]>([]);
-  const [allSecondaries, setAllSecondaries] = useState<SecondarySupplier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // ── List state ──
   const [search, setSearch] = useState('');
   const [chip, setChip] = useState<ChipFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // ── Detail: secondary list (per-selected supplier) ──
-  const [detailSecondaries, setDetailSecondaries] = useState<LocalSecondary[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
+  // ── Detail: extra local secondaries (inline-add before repo supports addSecondary) ──
+  const [localAddedSecondaries, setLocalAddedSecondaries] = useState<LocalSecondary[]>([]);
 
   // ── Detail: edit state ──
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditForm>({
     ten: '', cccd_mst: '', so_dien_thoai: '', nguoi_dai_dien: '', dia_chi: '',
   });
-  const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   // ── Detail: inline add secondary ──
   const [newName, setNewName] = useState('');
   const [newCccd, setNewCccd] = useState('');
 
-  // ── Load primaries + all secondaries ──
-  useEffect(() => {
-    setLoading(true);
-    const repo = getRepository('supplier');
-    repo.list(activePlantId).then(async ps => {
-      setPrimaries(ps);
-      const nested = await Promise.all(ps.map(p => repo.listSecondary(activePlantId, p.id)));
-      setAllSecondaries(nested.flat());
-      if (ps.length > 0) setSelectedId(prev => prev ?? ps[0].id);
-      setLoading(false);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePlantId]);
+  // ── Load primaries ──
+  const { data: primaries = [], isLoading: loading } = useQuery({
+    queryKey: ['suppliers', activePlantId],
+    queryFn: () => supplierApi.list(activePlantId),
+  });
+
+  // Auto-select first supplier when list loads
+  const effectiveSelectedId = selectedId ?? (primaries.length > 0 ? primaries[0].id : null);
+
+  // ── Load all secondaries (for count badge in list) ──
+  const { data: allSecondariesNested = [] } = useQuery({
+    queryKey: ['suppliers-all-secondaries', activePlantId],
+    queryFn: () => Promise.all(primaries.map(p => supplierApi.listSecondary(activePlantId, p.id))),
+    enabled: primaries.length > 0,
+  });
+  const allSecondaries = allSecondariesNested.flat();
 
   // ── Load secondaries for selected supplier ──
-  useEffect(() => {
-    if (!selectedId) { setDetailSecondaries([]); return; }
-    setDetailLoading(true);
-    setEditing(false);
-    setFormError(null);
-    const repo = getRepository('supplier');
-    repo.listSecondary(activePlantId, selectedId).then(secs => {
-      setDetailSecondaries(secs);
-      setDetailLoading(false);
-    });
-  }, [activePlantId, selectedId]);
+  const { data: fetchedDetailSecondaries = [], isLoading: detailLoading } = useQuery({
+    queryKey: ['supplier-secondaries', activePlantId, effectiveSelectedId],
+    queryFn: () => supplierApi.listSecondary(activePlantId, effectiveSelectedId!),
+    enabled: !!effectiveSelectedId,
+  });
+  const detailSecondaries: LocalSecondary[] = [...fetchedDetailSecondaries, ...localAddedSecondaries.filter(s => s.nha_cung_cap_chinh_id === effectiveSelectedId)];
+
+  // ── Save mutation ──
+  const saveMutation = useMutation({
+    mutationFn: (patch: Partial<Supplier>) => supplierApi.update(activePlantId, effectiveSelectedId!, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers', activePlantId] });
+      setEditing(false);
+    },
+    onError: (err) => setFormError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.'),
+  });
+
+  const saving = saveMutation.isPending;
+
+  // Re-align selectedId to effectiveSelectedId for downstream uses
+  const selectedIdResolved = effectiveSelectedId;
 
   // ── Filter chip counts ──
   const chipCounts = useMemo(() => {
@@ -105,8 +114,8 @@ export default function SuppliersPage() {
 
   // ── Selected supplier ──
   const selected = useMemo(
-    () => primaries.find(p => p.id === selectedId) ?? null,
-    [primaries, selectedId],
+    () => primaries.find(p => p.id === selectedIdResolved) ?? null,
+    [primaries, selectedIdResolved],
   );
 
   // ── Secondary count per supplier (for list items) ──
@@ -129,40 +138,30 @@ export default function SuppliersPage() {
     setEditing(true);
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!selected) return;
     if (!form.ten.trim()) { setFormError('Tên không được để trống.'); return; }
     if (!form.cccd_mst.trim()) { setFormError('Mã số không được để trống.'); return; }
     if (!form.dia_chi.trim()) { setFormError('Địa chỉ không được để trống.'); return; }
-    setSaving(true); setFormError(null);
-    try {
-      const repo = getRepository('supplier');
-      const updated = await repo.update(activePlantId, selected.id, {
-        ten: form.ten.trim(), cccd_mst: form.cccd_mst.trim(),
-        so_dien_thoai: form.so_dien_thoai.trim() || undefined,
-        nguoi_dai_dien: form.nguoi_dai_dien.trim() || undefined,
-        dia_chi: form.dia_chi.trim(),
-      });
-      setPrimaries(ps => ps.map(p => p.id === updated.id ? updated : p));
-      setEditing(false);
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.');
-    } finally {
-      setSaving(false);
-    }
+    setFormError(null);
+    saveMutation.mutate({
+      ten: form.ten.trim(), cccd_mst: form.cccd_mst.trim(),
+      so_dien_thoai: form.so_dien_thoai.trim() || undefined,
+      nguoi_dai_dien: form.nguoi_dai_dien.trim() || undefined,
+      dia_chi: form.dia_chi.trim(),
+    });
   }
 
   function handleAddSecondary() {
     const name = newName.trim();
     const cccd = newCccd.trim();
-    if (!name || !cccd || !selectedId) return;
+    if (!name || !cccd || !selectedIdResolved) return;
     const local: LocalSecondary = {
       id: `ncp-local-${Date.now()}`,
       ten: name, hinh_thuc: 'Cá nhân',
-      cccd_mst: cccd, nha_cung_cap_chinh_id: selectedId, _local: true,
+      cccd_mst: cccd, nha_cung_cap_chinh_id: selectedIdResolved, _local: true,
     };
-    setDetailSecondaries(prev => [...prev, local]);
-    setAllSecondaries(prev => [...prev, local]);
+    setLocalAddedSecondaries(prev => [...prev, local]);
     setNewName(''); setNewCccd('');
   }
 
@@ -266,8 +265,8 @@ export default function SuppliersPage() {
               key={s.id}
               supplier={s}
               secCount={secCountMap.get(s.id) ?? 0}
-              active={s.id === selectedId}
-              onClick={() => setSelectedId(s.id)}
+              active={s.id === selectedIdResolved}
+              onClick={() => { setSelectedId(s.id); setEditing(false); setFormError(null); }}
             />
           ))}
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -9,7 +10,7 @@ import {
   CheckCircle, AlertCircle, Clock, Minus, Trees,
 } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { plotApi } from '@/lib/api-client';
 import { fmtDate } from '@/lib/fmt';
 import type { PlotRegistry, DeforestationRiskStatus, PlotOwner, PolygonCoordinate, PlotDocument } from '@/types/index';
 
@@ -55,71 +56,69 @@ export default function PlotDetailPage() {
   const { activePlantId, roleAtPlant } = usePlant();
   const canEdit = roleAtPlant(activePlantId) !== 'User';
 
-  const [plot,      setPlot]      = useState<PlotRegistry | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [notFound,  setNotFound]  = useState(false);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('info');
 
   const [editing,   setEditing]   = useState(false);
   const [form,      setForm]      = useState<EditForm>({ LandTitle: '', TreeSpecies: '', DeforestationRiskStatus: 'Thấp', certificate: '', cert_id: '' });
-  const [saving,    setSaving]    = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    setEditing(false);
-    getRepository('plot').getWithDetails(activePlantId, id).then(p => {
-      if (!p) { setNotFound(true); setLoading(false); return; }
-      setPlot(p);
-      setLoading(false);
-    });
-  }, [activePlantId, id]);
+  const { data: plotData = null, isLoading: loading } = useQuery({
+    queryKey: ['plots', activePlantId, id],
+    queryFn: () => plotApi.getWithDetails(activePlantId, id),
+  });
+  const [localPlot, setLocalPlot] = useState<PlotRegistry | null>(null);
+  const displayPlot = localPlot ?? plotData;
+
+  const saveMutation = useMutation({
+    mutationFn: (patch: Partial<PlotRegistry>) => plotApi.update(activePlantId, id, patch),
+    onSuccess: (updated) => {
+      setLocalPlot(prev => prev ? { ...prev, ...updated } : (displayPlot ? { ...displayPlot, ...updated } : updated));
+      queryClient.invalidateQueries({ queryKey: ['plots', activePlantId] });
+      setEditing(false);
+    },
+    onError: (err) => setFormError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.'),
+  });
+
+  const saving = saveMutation.isPending;
+  const notFound = !loading && !displayPlot;
 
   function startEditing() {
-    if (!plot) return;
+    if (!displayPlot) return;
     setForm({
-      LandTitle:               plot.LandTitle,
-      TreeSpecies:             plot.TreeSpecies,
-      DeforestationRiskStatus: plot.DeforestationRiskStatus,
-      certificate:             plot.certificate ?? '',
-      cert_id:                 plot.cert_id ?? '',
+      LandTitle:               displayPlot.LandTitle,
+      TreeSpecies:             displayPlot.TreeSpecies,
+      DeforestationRiskStatus: displayPlot.DeforestationRiskStatus,
+      certificate:             displayPlot.certificate ?? '',
+      cert_id:                 displayPlot.cert_id ?? '',
     });
     setFormError(null);
     setEditing(true);
   }
 
-  async function handleSave() {
-    if (!plot) return;
+  function handleSave() {
+    if (!displayPlot) return;
     if (!form.LandTitle.trim())  { setFormError('Số giấy chứng nhận không được để trống.'); return; }
     if (!form.TreeSpecies.trim()) { setFormError('Loài cây không được để trống.'); return; }
-    setSaving(true); setFormError(null);
-    try {
-      const updated = await getRepository('plot').update(activePlantId, plot.PlotID, {
-        LandTitle:               form.LandTitle.trim(),
-        TreeSpecies:             form.TreeSpecies.trim(),
-        DeforestationRiskStatus: form.DeforestationRiskStatus,
-        certificate:             form.certificate.trim() || null,
-        cert_id:                 form.cert_id.trim() || null,
-      });
-      setPlot(prev => prev ? { ...prev, ...updated } : updated);
-      setEditing(false);
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.');
-    } finally {
-      setSaving(false);
-    }
+    setFormError(null);
+    saveMutation.mutate({
+      LandTitle:               form.LandTitle.trim(),
+      TreeSpecies:             form.TreeSpecies.trim(),
+      DeforestationRiskStatus: form.DeforestationRiskStatus,
+      certificate:             form.certificate.trim() || null,
+      cert_id:                 form.cert_id.trim() || null,
+    });
   }
 
   // ── Loading / error states ──
-  if (loading) {
+  if (loading && !displayPlot) {
     return (
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-12)', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
         Đang tải hồ sơ lô rừng...
       </div>
     );
   }
-  if (notFound || !plot) {
+  if (notFound || !displayPlot) {
     return (
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-12)', textAlign: 'center' }}>
         <Trees size={36} strokeWidth={1.25} style={{ color: 'var(--color-text-tertiary)', marginBottom: 8 }} />
@@ -133,6 +132,7 @@ export default function PlotDetailPage() {
     );
   }
 
+  const plot = displayPlot!;
   const tone = RISK_TONE[plot.DeforestationRiskStatus];
   const certOk = plot.certificate && plot.certificate !== 'Không' && plot.certificate !== 'Chờ cấp';
 

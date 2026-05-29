@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
   Search, List, Map, ChevronRight, X,
@@ -8,7 +9,7 @@ import {
   Trees, MapPin, ExternalLink,
 } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { plotApi } from '@/lib/api-client';
 import { fmtDate } from '@/lib/fmt';
 import type { PlotRegistry, DeforestationRiskStatus } from '@/types/index';
 
@@ -36,21 +37,14 @@ export default function PlotsPage() {
   const { activePlantId, roleAtPlant } = usePlant();
   const canEdit = roleAtPlant(activePlantId) !== 'User';
 
-  const [plots,      setPlots]      = useState<PlotRegistry[]>([]);
-  const [loading,    setLoading]    = useState(true);
+  const { data: plots = [], isLoading: loading } = useQuery({
+    queryKey: ['plots', activePlantId],
+    queryFn: () => plotApi.list(activePlantId),
+  });
   const [search,     setSearch]     = useState('');
   const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
   const [view,       setView]       = useState<ViewMode>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setSelectedId(null);
-    getRepository('plot').list(activePlantId).then(data => {
-      setPlots(data);
-      setLoading(false);
-    });
-  }, [activePlantId]);
 
   const counts = useMemo(() => {
     const m: Record<string, number> = { all: plots.length };

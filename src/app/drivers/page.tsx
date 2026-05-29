@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Users, CircleCheck, ClockAlert, UserX, Search, Download, UserPlus,
   Info, IdCard, Truck, History, Pencil, Unlock, Ban, X,
   ChevronsUpDown, ChevronUp, ChevronDown, UserRound,
 } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { driverApi } from '@/lib/api-client';
 import type { Driver, DriverStatus, LicenseClass } from '@/types/index';
 
 // ─── Local display types ──────────────────────────────────────────────────────
@@ -651,10 +652,6 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
 export default function DriversPage() {
   const { activePlantId } = usePlant();
 
-  // Data
-  const [rawDrivers, setRawDrivers] = useState<DriverDisplay[]>([]);
-  const [loading, setLoading]       = useState(true);
-
   // List state
   const [filter, setFilter]   = useState<FilterKey>('all');
   const [q, setQ]             = useState('');
@@ -665,17 +662,11 @@ export default function DriversPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   let toastId = 0;
 
-  // Load
-  useEffect(() => {
-    setLoading(true);
-    setOpenDriver(null);
-    const repo = getRepository('driver');
-    repo.list(activePlantId).then(drivers => {
-      setRawDrivers(drivers.map(toDisplay));
-      setLoading(false);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePlantId]);
+  const { data: rawDriversRaw = [], isLoading: loading } = useQuery({
+    queryKey: ['drivers', activePlantId],
+    queryFn: () => driverApi.list(activePlantId),
+  });
+  const rawDrivers = rawDriversRaw.map(toDisplay);
 
   // Counts
   const counts = useMemo(() => ({

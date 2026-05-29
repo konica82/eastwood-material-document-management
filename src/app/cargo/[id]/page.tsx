@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
   ChevronRight, Printer, Pencil, MoreHorizontal,
@@ -9,7 +10,7 @@ import {
   LogIn, LogOut, Package,
 } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { cargoApi } from '@/lib/api-client';
 import { fmtDateTime, fmtTime } from '@/lib/fmt';
 import { useParams } from 'next/navigation';
 import type { Cargo, CargoStatus } from '@/types/index';
@@ -50,56 +51,59 @@ export default function CargoDetailPage() {
   const { activePlantId, roleAtPlant } = usePlant();
   const canEdit = roleAtPlant(activePlantId) !== 'User';
 
-  const [cargo, setCargo] = useState<Cargo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   // Cancel modal
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    getRepository('cargo').get(activePlantId, id).then(c => {
-      if (!c) { setNotFound(true); setLoading(false); return; }
-      setCargo(c);
-      setLoading(false);
-    });
-  }, [activePlantId, id]);
+  const { data: cargoData = null, isLoading: loading } = useQuery({
+    queryKey: ['cargo', activePlantId, id],
+    queryFn: () => cargoApi.get(activePlantId, id),
+  });
 
-  async function handleUpdateStatus(status: CargoStatus, lyDoHuy?: string) {
-    if (!cargo) return;
-    setSaving(true);
-    try {
-      const updated = await getRepository('cargo').updateStatus(activePlantId, cargo.id, status, lyDoHuy);
-      setCargo(updated);
+  const [localCargo, setLocalCargo] = useState<Cargo | null>(null);
+  const displayCargo = localCargo ?? cargoData;
+
+  const statusMutation = useMutation({
+    mutationFn: ({ status, ly_do_huy }: { status: CargoStatus; ly_do_huy?: string }) =>
+      cargoApi.updateStatus(activePlantId, id, status, ly_do_huy),
+    onSuccess: (updated) => {
+      setLocalCargo(updated);
+      queryClient.invalidateQueries({ queryKey: ['cargo', activePlantId] });
       setShowCancelModal(false);
       setCancelReason('');
-    } finally {
-      setSaving(false);
-    }
+    },
+    onError: (err) => setCancelError(err instanceof Error ? err.message : 'Lỗi'),
+  });
+
+  const dossierMutation = useMutation({
+    mutationFn: () => cargoApi.completeDossier(activePlantId, id),
+    onSuccess: (updated) => {
+      setLocalCargo(updated);
+      queryClient.invalidateQueries({ queryKey: ['cargo', activePlantId] });
+    },
+  });
+
+  const saving = statusMutation.isPending || dossierMutation.isPending;
+
+  function handleUpdateStatus(status: CargoStatus, lyDoHuy?: string) {
+    statusMutation.mutate({ status, ly_do_huy: lyDoHuy });
   }
 
-  async function handleCompleteDossier() {
-    if (!cargo) return;
-    setSaving(true);
-    try {
-      const updated = await getRepository('cargo').completeDossier(activePlantId, cargo.id);
-      setCargo(updated);
-    } finally {
-      setSaving(false);
-    }
+  function handleCompleteDossier() {
+    dossierMutation.mutate();
   }
+
+  const notFound = !loading && !displayCargo;
 
   if (loading) {
     return <div style={{ padding: 48, textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>Đang tải...</div>;
   }
 
-  if (notFound || !cargo) {
+  if (notFound || !displayCargo) {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: 48, textAlign: 'center' }}>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 16 }}>Không tìm thấy chuyến xe này.</p>
@@ -108,6 +112,7 @@ export default function CargoDetailPage() {
     );
   }
 
+  const cargo = displayCargo!;
   const net = cargo.phieu_can?.dlc_trong_luong_hang ?? null;
 
   return (

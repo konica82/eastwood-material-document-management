@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Package, Pencil, X, Check } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { materialApi } from '@/lib/api-client';
 import type { Material } from '@/types/index';
 
 export default function MaterialDetailPage() {
@@ -13,33 +14,35 @@ export default function MaterialDetailPage() {
   const { activePlantId, roleAtPlant } = usePlant();
   const canEdit = roleAtPlant(activePlantId) !== 'User';
 
-  const [material, setMaterial] = useState<Material | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: materialData = null, isLoading: loading } = useQuery({
+    queryKey: ['materials', activePlantId, id],
+    queryFn: () => materialApi.get(activePlantId, id),
+  });
+  const [localMaterial, setLocalMaterial] = useState<Material | null>(null);
+  const displayMaterial = localMaterial ?? materialData;
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ten: '', ten_khoa_hoc: '' });
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    const repo = getRepository('material');
-    repo.get(activePlantId, id).then(m => {
-      if (!m) {
-        setNotFound(true);
-      } else {
-        setMaterial(m);
-        setForm({ ten: m.ten, ten_khoa_hoc: m.ten_khoa_hoc });
-      }
-      setLoading(false);
-    });
-  }, [activePlantId, id]);
+  const saveMutation = useMutation({
+    mutationFn: ({ ten, ten_khoa_hoc }: { ten: string; ten_khoa_hoc: string }) =>
+      materialApi.update(activePlantId, displayMaterial!.id, { ten, ten_khoa_hoc }),
+    onSuccess: (updated) => {
+      setLocalMaterial(updated);
+      queryClient.invalidateQueries({ queryKey: ['materials', activePlantId] });
+      setEditing(false);
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.'),
+  });
+
+  const saving = saveMutation.isPending;
+  const notFound = !loading && !displayMaterial;
 
   function startEditing() {
-    if (!material) return;
-    setForm({ ten: material.ten, ten_khoa_hoc: material.ten_khoa_hoc });
+    if (!displayMaterial) return;
+    setForm({ ten: displayMaterial.ten, ten_khoa_hoc: displayMaterial.ten_khoa_hoc });
     setError(null);
     setEditing(true);
   }
@@ -49,25 +52,13 @@ export default function MaterialDetailPage() {
     setError(null);
   }
 
-  async function handleSave() {
-    if (!material) return;
+  function handleSave() {
     const ten = form.ten.trim();
     const ten_khoa_hoc = form.ten_khoa_hoc.trim();
     if (!ten) { setError('Tên nguyên liệu không được để trống.'); return; }
     if (!ten_khoa_hoc) { setError('Tên khoa học không được để trống.'); return; }
-
-    setSaving(true);
     setError(null);
-    try {
-      const repo = getRepository('material');
-      const updated = await repo.update(activePlantId, material.id, { ten, ten_khoa_hoc });
-      setMaterial(updated);
-      setEditing(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.');
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({ ten, ten_khoa_hoc });
   }
 
   if (loading) {
@@ -78,7 +69,7 @@ export default function MaterialDetailPage() {
     );
   }
 
-  if (notFound || !material) {
+  if (notFound || !displayMaterial) {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: 'var(--space-12)', textAlign: 'center' }}>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
@@ -88,6 +79,8 @@ export default function MaterialDetailPage() {
       </div>
     );
   }
+
+  const material = displayMaterial!;
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>

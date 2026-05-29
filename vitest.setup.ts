@@ -1,0 +1,10 @@
+process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'test@test.iam.gserviceaccount.com';
+process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY = '-----BEGIN RSA PRIVATE KEY-----\nMOCK\n-----END RSA PRIVATE KEY-----';
+process.env.SHEETS_ID_NMXH = 'mock-sheet-id-nmxh';
+process.env.SHEETS_ID_NMQM = 'mock-sheet-id-nmqm';
+process.env.SHEETS_ID_NMCT = 'mock-sheet-id-nmct';
+process.env.DRIVE_FOLDER_NMXH = 'mock-drive-nmxh';
+process.env.DRIVE_FOLDER_NMQM = 'mock-drive-nmqm';
+process.env.DRIVE_FOLDER_NMCT = 'mock-drive-nmct';
+process.env.REPOSITORY_ADAPTER = 'google-sheets';
+process.env.DEFAULT_PLANT_ID = 'NMQM';

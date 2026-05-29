@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Pencil, Check, X } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { supplierApi } from '@/lib/api-client';
 import type { SecondarySupplier } from '@/types/index';
 
 export default function SecondarySupplierDetailPage() {
@@ -13,65 +14,56 @@ export default function SecondarySupplierDetailPage() {
   const { activePlantId, roleAtPlant } = usePlant();
   const canEdit = roleAtPlant(activePlantId) !== 'User';
 
-  const [supplier, setSupplier] = useState<SecondarySupplier | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: supplierData = null, isLoading: loading } = useQuery({
+    queryKey: ['secondary-supplier', activePlantId, id],
+    queryFn: () => supplierApi.getSecondary(activePlantId, id),
+  });
+  const [localSupplier, setLocalSupplier] = useState<SecondarySupplier | null>(null);
+  const displaySupplier = localSupplier ?? supplierData;
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ten: '', cccd_mst: '', so_dien_thoai: '' });
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    getRepository('supplier')
-      .getSecondary(activePlantId, id)
-      .then(s => {
-        if (!s) { setNotFound(true); setLoading(false); return; }
-        setSupplier(s);
-        setForm({ ten: s.ten, cccd_mst: s.cccd_mst, so_dien_thoai: s.so_dien_thoai ?? '' });
-        setLoading(false);
-      });
-  }, [activePlantId, id]);
+  const saveMutation = useMutation({
+    mutationFn: (patch: Partial<SecondarySupplier>) =>
+      supplierApi.updateSecondary(activePlantId, id, patch),
+    onSuccess: (updated) => {
+      setLocalSupplier({ ...updated, nha_cung_cap_chinh: displaySupplier?.nha_cung_cap_chinh });
+      queryClient.invalidateQueries({ queryKey: ['secondary-supplier', activePlantId, id] });
+      setEditing(false);
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.'),
+  });
+
+  const saving = saveMutation.isPending;
+  const notFound = !loading && !displaySupplier;
 
   function startEditing() {
-    if (!supplier) return;
-    setForm({ ten: supplier.ten, cccd_mst: supplier.cccd_mst, so_dien_thoai: supplier.so_dien_thoai ?? '' });
+    if (!displaySupplier) return;
+    setForm({ ten: displaySupplier.ten, cccd_mst: displaySupplier.cccd_mst, so_dien_thoai: displaySupplier.so_dien_thoai ?? '' });
     setError(null);
     setEditing(true);
   }
 
-  async function handleSave() {
-    if (!supplier) return;
+  function handleSave() {
+    if (!displaySupplier) return;
     const ten = form.ten.trim();
     const cccd_mst = form.cccd_mst.trim();
     if (!ten) { setError('Họ tên không được để trống.'); return; }
     if (!cccd_mst) { setError('Số CCCD không được để trống.'); return; }
     if (!form.so_dien_thoai.trim()) { setError('Số điện thoại không được để trống.'); return; }
-
-    setSaving(true);
     setError(null);
-    try {
-      const updated = await getRepository('supplier').updateSecondary(activePlantId, supplier.id, {
-        ten,
-        cccd_mst,
-        so_dien_thoai: form.so_dien_thoai.trim(),
-      });
-      setSupplier({ ...updated, nha_cung_cap_chinh: supplier.nha_cung_cap_chinh });
-      setEditing(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lỗi lưu dữ liệu.');
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({ ten, cccd_mst, so_dien_thoai: form.so_dien_thoai.trim() });
   }
 
   if (loading) {
     return <div style={{ padding: 'var(--space-12)', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>Đang tải...</div>;
   }
 
-  if (notFound || !supplier) {
+  if (notFound || !displaySupplier) {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: 'var(--space-12)', textAlign: 'center' }}>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
@@ -82,6 +74,7 @@ export default function SecondarySupplierDetailPage() {
     );
   }
 
+  const supplier = displaySupplier!;
   const primaryName = supplier.nha_cung_cap_chinh?.ten ?? null;
 
   return (

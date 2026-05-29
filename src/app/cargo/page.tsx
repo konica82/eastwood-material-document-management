@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Search, Upload, Plus, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { cargoApi } from '@/lib/api-client';
 import { fmtTime } from '@/lib/fmt';
 import type { Cargo, CargoStatus } from '@/types/index';
 
@@ -50,19 +51,13 @@ const STATUS_COLORS: Record<CargoStatus, { bg: string; fg: string; border: strin
 
 export default function CargoPage() {
   const { activePlantId } = usePlant();
-  const [cargos, setCargos] = useState<Cargo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: cargos = [], isLoading: loading } = useQuery({
+    queryKey: ['cargo', activePlantId],
+    queryFn: () => cargoApi.list(activePlantId),
+  });
   const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'created_at', dir: 'desc' });
-
-  useEffect(() => {
-    setLoading(true);
-    getRepository('cargo').list(activePlantId).then(list => {
-      setCargos(list);
-      setLoading(false);
-    });
-  }, [activePlantId]);
 
   const counts = useMemo(() => {
     const m: Record<string, number> = { all: cargos.length };

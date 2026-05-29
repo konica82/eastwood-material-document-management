@@ -39,26 +39,26 @@ export const PLANTS: Record<string, PlantConfig> = {
     displayName: "NMQM",
     name: "Nhà máy Quảng Minh",
     timezone: "Asia/Ho_Chi_Minh",
-    sheetsId: "REPLACE_WITH_NMQM_SHEET_ID",
-    driveFolderId: "REPLACE_WITH_NMQM_DRIVE_FOLDER_ID",
+    sheetsId: process.env.SHEETS_ID_NMQM ?? "",
+    driveFolderId: process.env.DRIVE_FOLDER_NMQM ?? "",
   },
   NMXH: {
     id: "NMXH",
     displayName: "NMXH",
     name: "Nhà máy Xuân Hòa",
     timezone: "Asia/Ho_Chi_Minh",
-    sheetsId: "REPLACE_WITH_NMXH_SHEET_ID",
-    driveFolderId: "REPLACE_WITH_NMXH_DRIVE_FOLDER_ID",
+    sheetsId: process.env.SHEETS_ID_NMXH ?? "",
+    driveFolderId: process.env.DRIVE_FOLDER_NMXH ?? "",
   },
   NMCT: {
     id: "NMCT",
     displayName: "NMCT",
     name: "Nhà máy Cà Tang",
     timezone: "Asia/Ho_Chi_Minh",
-    sheetsId: "REPLACE_WITH_NMCT_SHEET_ID",
-    driveFolderId: "REPLACE_WITH_NMCT_DRIVE_FOLDER_ID",
+    sheetsId: process.env.SHEETS_ID_NMCT ?? "",
+    driveFolderId: process.env.DRIVE_FOLDER_NMCT ?? "",
   },
-} as const;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -1,14 +1,23 @@
 /**
- * Repository factory.
+ * Repository factory — client-safe version.
  *
- * The single place where the rest of the application obtains a repository.
- * Today every call throws "not implemented" — the Sheets adapter wires in
- * next. When the adapter is ready, replace the stub bodies without changing
- * any call site.
+ * This module is imported by both Server and Client Components.
+ * It always returns the mock adapter so it never pulls Node.js-only
+ * dependencies into the client bundle.
  *
- * Usage:
+ * For server-side code (Route Handlers, Server Actions, Server Components)
+ * that needs live Google Sheets data, import from
+ *   src/lib/repository/server.ts
+ * instead — that module is guarded by `server-only` and switches on
+ * REPOSITORY_ADAPTER at runtime.
+ *
+ * Usage (client or server, mock data):
  *   const repo = getRepository("cargo");
  *   const cargo = await repo.get(plantId, cargoId);
+ *
+ * Usage (server-only, live data when REPOSITORY_ADAPTER=google-sheets):
+ *   import { getServerRepository } from '@/lib/repository/server';
+ *   const repo = getServerRepository("cargo");
  */
 
 import type {
@@ -34,7 +43,6 @@ import { mockUserRepository }         from "./mock/user";
 
 // ─── Entity name registry ─────────────────────────────────────────────────────
 
-/** All entity names the factory understands. Adding a new entity = add it here. */
 export type EntityName =
   | "cargo"
   | "weighing-slip"
@@ -46,7 +54,6 @@ export type EntityName =
   | "dashboard"
   | "user";
 
-/** Maps entity name → its repository interface. */
 export type RepositoryMap = {
   cargo: CargoRepository;
   "weighing-slip": WeighingSlipRepository;
@@ -61,16 +68,6 @@ export type RepositoryMap = {
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
-const NOT_IMPLEMENTED = (entity: string) =>
-  new Error(
-    `Repository for "${entity}" is not implemented yet. ` +
-      "Wire the Sheets adapter before calling this method.",
-  );
-
-/**
- * Typed overloads so callers get the exact repository interface back — no
- * casting required at the call site.
- */
 export function getRepository(entity: "cargo"): CargoRepository;
 export function getRepository(entity: "weighing-slip"): WeighingSlipRepository;
 export function getRepository(entity: "driver"): DriverRepository;
@@ -83,34 +80,15 @@ export function getRepository(entity: "user"): UserRepository;
 export function getRepository(entity: EntityName): RepositoryMap[EntityName];
 
 export function getRepository(entity: EntityName): RepositoryMap[EntityName] {
-  // Each case returns an object that satisfies the correct interface at
-  // compile time. Every method throws at runtime until the adapter is wired.
   switch (entity) {
-    case "cargo":
-      return mockCargoRepository;
-
-    case "weighing-slip":
-      return mockWeighingSlipRepository;
-
-    case "driver":
-      return mockDriverRepository;
-
-    case "material":
-      return mockMaterialRepository;
-
-    case "supplier":
-      return mockSupplierRepository;
-
-    case "plot":
-      return mockPlotRepository;
-
-    case "activity-log":
-      return mockActivityLogRepository;
-
-    case "dashboard":
-      return mockDashboardRepository;
-
-    case "user":
-      return mockUserRepository;
+    case "cargo":         return mockCargoRepository;
+    case "weighing-slip": return mockWeighingSlipRepository;
+    case "driver":        return mockDriverRepository;
+    case "material":      return mockMaterialRepository;
+    case "supplier":      return mockSupplierRepository;
+    case "plot":          return mockPlotRepository;
+    case "activity-log":  return mockActivityLogRepository;
+    case "dashboard":     return mockDashboardRepository;
+    case "user":          return mockUserRepository;
   }
 }

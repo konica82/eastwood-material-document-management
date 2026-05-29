@@ -1,29 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Package, Search, LayoutGrid, List } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
-import { getRepository } from '@/lib/repository';
+import { materialApi } from '@/lib/api-client';
 import type { Material } from '@/types/index';
 
 type ViewMode = 'card' | 'table';
 
 export default function MaterialsPage() {
   const { activePlantId } = usePlant();
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: materials = [], isLoading: loading } = useQuery({
+    queryKey: ['materials', activePlantId],
+    queryFn: () => materialApi.list(activePlantId),
+  });
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ViewMode>('card');
-
-  useEffect(() => {
-    setLoading(true);
-    const repo = getRepository('material');
-    repo.list(activePlantId).then(data => {
-      setMaterials(data);
-      setLoading(false);
-    });
-  }, [activePlantId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return materials;

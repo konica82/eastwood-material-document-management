@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { PlantProvider } from '@/contexts/PlantContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export default function RootLayout({
       className={cn(inter.variable, jetbrainsMono.variable)}
     >
       <body>
+        <QueryProvider>
         <PlantProvider>
           <ThemeProvider>
             <div
@@ -63,6 +65,7 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
         </PlantProvider>
+        </QueryProvider>
       </body>
     </html>
   );
