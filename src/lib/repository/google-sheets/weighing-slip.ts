@@ -27,8 +27,9 @@ const COL = {
 } as const;
 
 const COL_LEN = 13;
-const SHEET = "PhieuCan";
-const RANGE = `${SHEET}!A2:M`;
+const SHEET_BASE = "PhieuCan";
+const sheet = (plantId: string) => `${SHEET_BASE}_${plantId}`;
+const range = (plantId: string) => `${sheet(plantId)}!A2:M`;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export function makeWeighingSlipRepository(plantId: string): WeighingSlipReposit
     const cached = cache.get<WeighingSlip[]>(key);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, RANGE);
+    const rows = await readRange(plantId, range(plantId));
     const slips = rows
       .filter((r) => r[COL.ID] && r[COL.NHA_MAY] === plantId)
       .map(rowToSlip);
@@ -105,7 +106,7 @@ export function makeWeighingSlipRepository(plantId: string): WeighingSlipReposit
 
     async update(_plantId: string, id: string, patch: Partial<WeighingSlip>): Promise<WeighingSlip> {
       cache.invalidate(`weighing-slip:${plantId}:*`);
-      const rows = await readRange(plantId, RANGE);
+      const rows = await readRange(plantId, range(plantId));
       const idx = rows.findIndex((r) => r[COL.ID] === id);
       if (idx === -1) throw new Error(`WeighingSlip ${id} not found`);
 
@@ -114,7 +115,7 @@ export function makeWeighingSlipRepository(plantId: string): WeighingSlipReposit
         ...patch,
         updated_at: new Date().toISOString(),
       };
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:M${idx + 2}`, [slipToRow(updated)]);
+      await queueUpdate(plantId, `${sheet(plantId)}!A${idx + 2}:M${idx + 2}`, [slipToRow(updated)]);
       cache.invalidate(`weighing-slip:${plantId}:*`);
       return updated;
     },
@@ -145,7 +146,7 @@ export function makeWeighingSlipRepository(plantId: string): WeighingSlipReposit
         updated_at: now,
       };
 
-      await appendRows(plantId, `${SHEET}!A:M`, [slipToRow(slip)]);
+      await appendRows(plantId, `${sheet(plantId)}!A:M`, [slipToRow(slip)]);
       cache.invalidate(`weighing-slip:${plantId}:*`);
       return slip;
     },
@@ -156,7 +157,7 @@ export function makeWeighingSlipRepository(plantId: string): WeighingSlipReposit
       dlc_ngay_can_ra: string,
       dlc_can_ra: number,
     ): Promise<WeighingSlip> {
-      const rows = await readRange(plantId, RANGE);
+      const rows = await readRange(plantId, range(plantId));
       const idx = rows.findIndex((r) => r[COL.ID] === phieu_can_id);
       if (idx === -1) throw new Error(`WeighingSlip ${phieu_can_id} not found`);
 
@@ -170,7 +171,7 @@ export function makeWeighingSlipRepository(plantId: string): WeighingSlipReposit
         updated_at: new Date().toISOString(),
       };
 
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:M${idx + 2}`, [slipToRow(updated)]);
+      await queueUpdate(plantId, `${sheet(plantId)}!A${idx + 2}:M${idx + 2}`, [slipToRow(updated)]);
       cache.invalidate(`weighing-slip:${plantId}:*`);
       return updated;
     },

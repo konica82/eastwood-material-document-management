@@ -143,8 +143,10 @@ function makeCargo(
     id,
     nha_may: 'NMQM',
     so_xe: opts.plate,
+    so_mooc: null,
     loai_xe: 'Xe tải',
     stt_tai: opts.sttTai,
+    hinh_phieu_thong_tin: null,
     trang_thai: opts.status,
     hoan_thanh_luc: opts.hoanThanhLuc ?? null,
     ly_do_huy: opts.lyDoHuy ?? null,
@@ -154,11 +156,19 @@ function makeCargo(
 
     nguyen_lieu_id: opts.materialId,
     nguyen_lieu: material,
+    loai_nguyen_lieu: null,
 
     nha_cung_cap_id: opts.supplierId,
     nha_cung_cap: supplier,
     nha_cung_cap_phu_id: null,
     nha_cung_cap_phu: null,
+    chu_lam_san: null,
+
+    dia_chi_nguyen_lieu: null,
+    tinh: null,
+    huyen: null,
+    xa: null,
+    ten_chu_rung: null,
 
     plot_id: null,
     plot: null,

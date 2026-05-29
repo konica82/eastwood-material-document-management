@@ -23,36 +23,46 @@ import { randomUUID } from "crypto";
 
 // ─── Column indices ───────────────────────────────────────────────────────────
 
+// Column layout matches actual AppSheet sheet (A=0 … Z=25):
+//   A=id, B=nha_may, C=stt_tai, D=hinh_phieu_thong_tin, E=tai_xe_id,
+//   F=loai_xe, G=so_xe, H=so_mooc, I=nguyen_lieu_id, J=loai_nguyen_lieu,
+//   K=nha_cung_cap_id, L=nha_cung_cap_phu_id, M=chu_lam_san,
+//   N=dia_chi_nguyen_lieu, O=tinh, P=huyen, Q=xa, R=khoang_cach_nha_may,
+//   S=ten_chu_rung, T=trang_thai, U=phieu_can_id, V=xe_hang_hoan_thanh_date,
+//   W=created_by, X=created_date, Y=updated_date, Z=updated_by
 const COL = {
   ID: 0,
   NHA_MAY: 1,
-  SO_XE: 2,
-  LOAI_XE: 3,
-  TRANG_THAI: 4,
-  STT_TAI: 5,
-  LY_DO_HUY: 6,
-  HOAN_THANH_LUC: 7,
-  TAI_XE_ID: 8,
-  NGUYEN_LIEU_ID: 9,
+  STT_TAI: 2,
+  HINH_PHIEU_THONG_TIN: 3,
+  TAI_XE_ID: 4,
+  LOAI_XE: 5,
+  SO_XE: 6,
+  SO_MOOC: 7,
+  NGUYEN_LIEU_ID: 8,
+  LOAI_NGUYEN_LIEU: 9,
   NHA_CUNG_CAP_ID: 10,
   NHA_CUNG_CAP_PHU_ID: 11,
-  PLOT_ID: 12,
-  KHOANG_CACH: 13,
-  PHIEU_CAN_ID: 14,
-  SO_PHIEU_CAN: 15,
-  THOI_GIAN_CHO: 16,
-  TONG_THOI_GIAN_CAN: 17,
-  HSLS_HOAN_THANH: 18,
-  GHI_CHU: 19,
-  CREATED_AT: 20,
-  CREATED_BY: 21,
-  UPDATED_AT: 22,
-  UPDATED_BY: 23,
+  CHU_LAM_SAN: 12,
+  DIA_CHI_NGUYEN_LIEU: 13,
+  TINH: 14,
+  HUYEN: 15,
+  XA: 16,
+  KHOANG_CACH: 17,
+  TEN_CHU_RUNG: 18,
+  TRANG_THAI: 19,
+  PHIEU_CAN_ID: 20,
+  HOAN_THANH_LUC: 21,
+  CREATED_BY: 22,
+  CREATED_AT: 23,
+  UPDATED_AT: 24,
+  UPDATED_BY: 25,
 } as const;
 
-const COL_LEN = 24;
-const SHEET = "DanhSachXeHang";
-const RANGE = `${SHEET}!A2:X`;
+const COL_LEN = 26;
+const SHEET_BASE = "DanhSachXeHang";
+const sheet = (plantId: string) => `${SHEET_BASE}_${plantId}`;
+const range = (plantId: string) => `${sheet(plantId)}!A2:Z`;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
@@ -60,34 +70,44 @@ export function rowToCargo(row: string[]): Cargo {
   return {
     id: cell(row, COL.ID),
     nha_may: cell(row, COL.NHA_MAY),
-    so_xe: cell(row, COL.SO_XE),
-    loai_xe: (strOrNull(row, COL.LOAI_XE) as VehicleType | null),
-    trang_thai: cell(row, COL.TRANG_THAI) as CargoStatus,
     stt_tai: numOrNull(row, COL.STT_TAI),
-    ly_do_huy: strOrNull(row, COL.LY_DO_HUY),
-    hoan_thanh_luc: strOrNull(row, COL.HOAN_THANH_LUC),
+    hinh_phieu_thong_tin: strOrNull(row, COL.HINH_PHIEU_THONG_TIN),
     tai_xe_id: cell(row, COL.TAI_XE_ID),
     tai_xe: null,
+    loai_xe: strOrNull(row, COL.LOAI_XE) as VehicleType | null,
+    so_xe: cell(row, COL.SO_XE),
+    so_mooc: strOrNull(row, COL.SO_MOOC),
     nguyen_lieu_id: cell(row, COL.NGUYEN_LIEU_ID),
     nguyen_lieu: null,
+    loai_nguyen_lieu: strOrNull(row, COL.LOAI_NGUYEN_LIEU),
     nha_cung_cap_id: cell(row, COL.NHA_CUNG_CAP_ID),
     nha_cung_cap: null,
     nha_cung_cap_phu_id: strOrNull(row, COL.NHA_CUNG_CAP_PHU_ID),
     nha_cung_cap_phu: null,
-    plot_id: strOrNull(row, COL.PLOT_ID),
-    plot: null,
+    chu_lam_san: strOrNull(row, COL.CHU_LAM_SAN),
+    dia_chi_nguyen_lieu: strOrNull(row, COL.DIA_CHI_NGUYEN_LIEU),
+    tinh: strOrNull(row, COL.TINH),
+    huyen: strOrNull(row, COL.HUYEN),
+    xa: strOrNull(row, COL.XA),
     khoang_cach_nha_may: numOrNull(row, COL.KHOANG_CACH),
+    ten_chu_rung: strOrNull(row, COL.TEN_CHU_RUNG),
+    trang_thai: cell(row, COL.TRANG_THAI) as CargoStatus,
     phieu_can_id: strOrNull(row, COL.PHIEU_CAN_ID),
     phieu_can: null,
-    so_phieu_can: strOrNull(row, COL.SO_PHIEU_CAN),
-    thoi_gian_cho: numOrNull(row, COL.THOI_GIAN_CHO),
-    tong_thoi_gian_can: numOrNull(row, COL.TONG_THOI_GIAN_CAN),
-    hsls_hoan_thanh: boolCell(row, COL.HSLS_HOAN_THANH),
-    ghi_chu: strOrNull(row, COL.GHI_CHU),
-    created_at: cell(row, COL.CREATED_AT),
+    hoan_thanh_luc: strOrNull(row, COL.HOAN_THANH_LUC),
     created_by: cell(row, COL.CREATED_BY),
+    created_at: cell(row, COL.CREATED_AT),
     updated_at: cell(row, COL.UPDATED_AT),
     updated_by: cell(row, COL.UPDATED_BY),
+    // Fields not yet in AppSheet schema — kept for UI compatibility
+    plot_id: null,
+    plot: null,
+    ly_do_huy: null,
+    so_phieu_can: null,
+    thoi_gian_cho: null,
+    tong_thoi_gian_can: null,
+    hsls_hoan_thanh: false,
+    ghi_chu: null,
   };
 }
 
@@ -95,26 +115,28 @@ export function cargoToRow(c: Cargo): string[] {
   const row = new Array<string>(COL_LEN).fill("");
   row[COL.ID] = c.id;
   row[COL.NHA_MAY] = c.nha_may;
-  row[COL.SO_XE] = c.so_xe;
-  row[COL.LOAI_XE] = c.loai_xe ?? "";
-  row[COL.TRANG_THAI] = c.trang_thai;
   row[COL.STT_TAI] = c.stt_tai != null ? String(c.stt_tai) : "";
-  row[COL.LY_DO_HUY] = c.ly_do_huy ?? "";
-  row[COL.HOAN_THANH_LUC] = c.hoan_thanh_luc ?? "";
+  row[COL.HINH_PHIEU_THONG_TIN] = c.hinh_phieu_thong_tin ?? "";
   row[COL.TAI_XE_ID] = c.tai_xe_id;
+  row[COL.LOAI_XE] = c.loai_xe ?? "";
+  row[COL.SO_XE] = c.so_xe;
+  row[COL.SO_MOOC] = c.so_mooc ?? "";
   row[COL.NGUYEN_LIEU_ID] = c.nguyen_lieu_id;
+  row[COL.LOAI_NGUYEN_LIEU] = c.loai_nguyen_lieu ?? "";
   row[COL.NHA_CUNG_CAP_ID] = c.nha_cung_cap_id;
   row[COL.NHA_CUNG_CAP_PHU_ID] = c.nha_cung_cap_phu_id ?? "";
-  row[COL.PLOT_ID] = c.plot_id ?? "";
+  row[COL.CHU_LAM_SAN] = c.chu_lam_san ?? "";
+  row[COL.DIA_CHI_NGUYEN_LIEU] = c.dia_chi_nguyen_lieu ?? "";
+  row[COL.TINH] = c.tinh ?? "";
+  row[COL.HUYEN] = c.huyen ?? "";
+  row[COL.XA] = c.xa ?? "";
   row[COL.KHOANG_CACH] = c.khoang_cach_nha_may != null ? String(c.khoang_cach_nha_may) : "";
+  row[COL.TEN_CHU_RUNG] = c.ten_chu_rung ?? "";
+  row[COL.TRANG_THAI] = c.trang_thai;
   row[COL.PHIEU_CAN_ID] = c.phieu_can_id ?? "";
-  row[COL.SO_PHIEU_CAN] = c.so_phieu_can ?? "";
-  row[COL.THOI_GIAN_CHO] = c.thoi_gian_cho != null ? String(c.thoi_gian_cho) : "";
-  row[COL.TONG_THOI_GIAN_CAN] = c.tong_thoi_gian_can != null ? String(c.tong_thoi_gian_can) : "";
-  row[COL.HSLS_HOAN_THANH] = c.hsls_hoan_thanh ? "TRUE" : "FALSE";
-  row[COL.GHI_CHU] = c.ghi_chu ?? "";
-  row[COL.CREATED_AT] = c.created_at;
+  row[COL.HOAN_THANH_LUC] = c.hoan_thanh_luc ?? "";
   row[COL.CREATED_BY] = c.created_by;
+  row[COL.CREATED_AT] = c.created_at;
   row[COL.UPDATED_AT] = c.updated_at;
   row[COL.UPDATED_BY] = c.updated_by;
   return row;
@@ -123,7 +145,7 @@ export function cargoToRow(c: Cargo): string[] {
 // ─── Business Rule 1: per-day sequence number ────────────────────────────────
 
 async function nextDailySequence(plantId: string, today: string): Promise<number> {
-  const rows = await readRange(plantId, RANGE);
+  const rows = await readRange(plantId, range(plantId));
   const todayCount = rows.filter(
     (r) =>
       r[COL.NHA_MAY] === plantId &&
@@ -140,7 +162,7 @@ export function makeCargoRepository(plantId: string): CargoRepository {
     const cached = cache.get<Cargo[]>(key);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, RANGE);
+    const rows = await readRange(plantId, range(plantId));
     const cargos = rows
       .filter((r) => r[COL.ID] && r[COL.NHA_MAY] === plantId)
       .map(rowToCargo);
@@ -223,7 +245,7 @@ export function makeCargoRepository(plantId: string): CargoRepository {
         updated_by: "system",
       };
 
-      await appendRows(plantId, `${SHEET}!A:X`, [cargoToRow(cargo)]);
+      await appendRows(plantId, `${sheet(plantId)}!A:Z`, [cargoToRow(cargo)]);
       cache.invalidate(`cargo:${plantId}:*`);
       cache.invalidate(`dashboard:${plantId}:*`);
       return cargo;
@@ -231,7 +253,7 @@ export function makeCargoRepository(plantId: string): CargoRepository {
 
     async update(_plantId: string, id: string, patch: Partial<Cargo>): Promise<Cargo> {
       cache.invalidate(`cargo:${plantId}:*`);
-      const rows = await readRange(plantId, RANGE);
+      const rows = await readRange(plantId, range(plantId));
       const idx = rows.findIndex((r) => r[COL.ID] === id);
       if (idx === -1) throw new Error(`Cargo ${id} not found`);
 
@@ -240,7 +262,7 @@ export function makeCargoRepository(plantId: string): CargoRepository {
         ...patch,
         updated_at: new Date().toISOString(),
       };
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:X${idx + 2}`, [cargoToRow(updated)]);
+      await queueUpdate(plantId, `${sheet(plantId)}!A${idx + 2}:Z${idx + 2}`, [cargoToRow(updated)]);
       cache.invalidate(`cargo:${plantId}:*`);
       cache.invalidate(`dashboard:${plantId}:*`);
       return updated;
@@ -252,7 +274,7 @@ export function makeCargoRepository(plantId: string): CargoRepository {
       status: CargoStatus,
       ly_do_huy?: string,
     ): Promise<Cargo> {
-      const rows = await readRange(plantId, RANGE);
+      const rows = await readRange(plantId, range(plantId));
       const idx = rows.findIndex((r) => r[COL.ID] === cargoId);
       if (idx === -1) throw new Error(`Cargo ${cargoId} not found`);
 
@@ -269,14 +291,14 @@ export function makeCargoRepository(plantId: string): CargoRepository {
         updated_by: "system",
       };
 
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:X${idx + 2}`, [cargoToRow(updated)]);
+      await queueUpdate(plantId, `${sheet(plantId)}!A${idx + 2}:Z${idx + 2}`, [cargoToRow(updated)]);
       cache.invalidate(`cargo:${plantId}:*`);
       cache.invalidate(`dashboard:${plantId}:*`);
       return updated;
     },
 
     async completeDossier(_plantId: string, cargoId: string): Promise<Cargo> {
-      const rows = await readRange(plantId, RANGE);
+      const rows = await readRange(plantId, range(plantId));
       const idx = rows.findIndex((r) => r[COL.ID] === cargoId);
       if (idx === -1) throw new Error(`Cargo ${cargoId} not found`);
 
@@ -299,7 +321,7 @@ export function makeCargoRepository(plantId: string): CargoRepository {
         updated_by: "system",
       };
 
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:X${idx + 2}`, [cargoToRow(updated)]);
+      await queueUpdate(plantId, `${sheet(plantId)}!A${idx + 2}:Z${idx + 2}`, [cargoToRow(updated)]);
       cache.invalidate(`cargo:${plantId}:*`);
       cache.invalidate(`dashboard:${plantId}:*`);
       return updated;

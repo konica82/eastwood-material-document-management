@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const { plantId } = await params;
     const xe_hang_id = req.nextUrl.searchParams.get("xe_hang_id") ?? undefined;
     const query = xe_hang_id ? { filters: { xe_hang_id } } : undefined;
-    const data = await getServerRepository("weighing-slip").list(plantId, query);
+    const data = await getServerRepository("weighing-slip", plantId).list(plantId, query);
     return ok(data);
   } catch (err) {
     return handleError(err);

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (!parsed.success) return validationError(parsed.error.issues[0]?.message ?? 'Dữ liệu không hợp lệ');
 
     const { cargoId, dlc_ngay_can_vao, dlc_can_vao } = parsed.data;
-    const data = await getServerRepository("weighing-slip").recordWeighIn(
+    const data = await getServerRepository("weighing-slip", plantId).recordWeighIn(
       plantId, cargoId, dlc_ngay_can_vao, dlc_can_vao,
     );
     return ok(data, 201);

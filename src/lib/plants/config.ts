@@ -38,6 +38,7 @@ export interface PlantConfig {
  * used across all plants. Not a real plant; only referenced by the plot adapter.
  */
 export const LORUNG_SHEETS_ID = process.env.SHEETS_ID_LORUNG ?? "";
+export const NGUYEN_LIEU_SHEETS_ID = process.env.SHEETS_ID_NGUYEN_LIEU ?? "";
 
 export const PLANTS: Record<string, PlantConfig> = {
   NMQM: {

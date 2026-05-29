@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const user = await getSessionUser();
     if (!hasPlantAccess(user, plantId)) return forbiddenError();
 
-    const data = await getServerRepository("plot").get(plantId, id);
+    const data = await getServerRepository("plot", plantId).get(plantId, id);
     if (!data) return apiError("NOT_FOUND", `Không tìm thấy lô rừng ${id}.`, 404);
     return ok(data);
   } catch (err) {
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const parsed = PatchPlotSchema.safeParse(await req.json());
     if (!parsed.success) return validationError(parsed.error.issues[0]?.message ?? 'Dữ liệu không hợp lệ');
 
-    const data = await getServerRepository("plot").update(plantId, id, parsed.data);
+    const data = await getServerRepository("plot", plantId).update(plantId, id, parsed.data);
     return ok(data);
   } catch (err) {
     return handleError(err);

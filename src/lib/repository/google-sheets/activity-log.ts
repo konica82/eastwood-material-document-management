@@ -22,8 +22,9 @@ const COL = {
 } as const;
 
 const COL_LEN = 8;
-const SHEET = "ActivityLog";
-const RANGE = `${SHEET}!A2:H`;
+const SHEET_BASE = "ActivityLog";
+const sheet = (plantId: string) => `${SHEET_BASE}_${plantId}`;
+const range = (plantId: string) => `${sheet(plantId)}!A2:H`;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ export function makeActivityLogRepository(plantId: string): ActivityLogRepositor
       const key = listCacheKey("activity-log", plantId, "all");
       const cached = cache.get<ActivityLogEntry[]>(key);
       if (!cached) {
-        const rows = await readRange(plantId, RANGE);
+        const rows = await readRange(plantId, range(plantId));
         const entries = rows
           .filter((r) => r[COL.ID] && r[COL.PLANT_ID] === plantId)
           .map(rowToEntry)
@@ -92,7 +93,7 @@ export function makeActivityLogRepository(plantId: string): ActivityLogRepositor
         created_at: now,
       };
 
-      await appendRows(input.plant_id, `${SHEET}!A:H`, [entryToRow(entry)]);
+      await appendRows(input.plant_id, `${sheet(input.plant_id)}!A:H`, [entryToRow(entry)]);
       cache.invalidate(`activity-log:${input.plant_id}:*`);
       return entry;
     },

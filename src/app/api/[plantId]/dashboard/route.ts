@@ -8,7 +8,7 @@ type Ctx = { params: Promise<{ plantId: string }> };
 export async function GET(_req: NextRequest, { params }: Ctx) {
   try {
     const { plantId } = await params;
-    const cargos = await getServerRepository("cargo").list(plantId);
+    const cargos = await getServerRepository("cargo", plantId).list(plantId);
     const data = computeDashboardMetrics(cargos);
     return ok(data);
   } catch (err) {

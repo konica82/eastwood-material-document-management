@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         ? { trang_thai: searchParams.get("trang_thai") }
         : undefined,
     };
-    const repo = getServerRepository("cargo");
+    const repo = getServerRepository("cargo", plantId);
     const data = await repo.list(plantId, query);
     return ok(data);
   } catch (err) {

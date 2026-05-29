@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   try {
     const { plantId } = await params;
     const search = req.nextUrl.searchParams.get("search") ?? undefined;
-    const data = await getServerRepository("plot").list(plantId, { search });
+    const data = await getServerRepository("plot", plantId).list(plantId, { search });
     return ok(data);
   } catch (err) {
     return handleError(err);

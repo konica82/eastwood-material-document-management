@@ -204,15 +204,18 @@ export interface Cargo {
 
   // ── Identification ──────────────────────────────────────────────────────────
   so_xe: string;       // vehicle plate number (monospace in UI)
+  so_mooc: string | null;     // trailer plate number
   loai_xe: VehicleType | null;
   /** Per-day sequence number — Business Rule 1 (stored on create). */
   stt_tai: number | null;
+  /** Info slip photo — AppSheet Drive path. */
+  hinh_phieu_thong_tin: string | null;
 
   // ── Status & lifecycle ──────────────────────────────────────────────────────
   trang_thai: CargoStatus;
-  /** Timestamp when status moved to Hoàn thành — stamped server-side. */
+  /** Timestamp when status moved to Hoàn thành. */
   hoan_thanh_luc: string | null;
-  /** Required when status is Hủy lượt. */
+  /** Required when status is Hủy lượt. Not yet in AppSheet schema — null until added. */
   ly_do_huy: string | null;
 
   // ── Driver (FK + joined) ────────────────────────────────────────────────────
@@ -222,40 +225,49 @@ export interface Cargo {
   // ── Material (FK + joined) ──────────────────────────────────────────────────
   nguyen_lieu_id: string;
   nguyen_lieu: Material | null;
+  /** Denormalised material type label stored by AppSheet. */
+  loai_nguyen_lieu: string | null;
 
   // ── Supplier chain (FK + joined) ────────────────────────────────────────────
   nha_cung_cap_id: string;
   nha_cung_cap: Supplier | null;
   nha_cung_cap_phu_id: string | null;
   nha_cung_cap_phu: SecondarySupplier | null;
+  /** Forest product owner name. */
+  chu_lam_san: string | null;
+
+  // ── Source location ──────────────────────────────────────────────────────────
+  dia_chi_nguyen_lieu: string | null;   // full address string
+  tinh: string | null;                  // province
+  huyen: string | null;                 // district
+  xa: string | null;                    // commune
+  ten_chu_rung: string | null;          // forest owner name
 
   // ── Source plot (FK + joined) ────────────────────────────────────────────────
   plot_id: string | null;
   plot: PlotRegistry | null;
-  /** Distance to factory in km — computed server-side when plot is set. */
+  /** Distance to factory in km. */
   khoang_cach_nha_may: number | null;
 
   // ── Weighing (FK + joined) ───────────────────────────────────────────────────
   phieu_can_id: string | null;
   phieu_can: WeighingSlip | null;
-  /** Denormalised slip number for list-view display without a join. */
+  /** Denormalised slip number. Not yet in AppSheet schema — null until added. */
   so_phieu_can: string | null;
 
-  // ── Timing derivations (stored, see Business Rules 2 & 3) ───────────────────
-  /** Milliseconds from cargo creation to first weigh-in. Rule 2. */
+  // ── Timing derivations — not yet in AppSheet schema ─────────────────────────
   thoi_gian_cho: number | null;
-  /** Milliseconds from weigh-in to weigh-out. Rule 3. */
   tong_thoi_gian_can: number | null;
 
-  // ── HSLS / dossier completion ────────────────────────────────────────────────
+  // ── HSLS / dossier completion — not yet in AppSheet schema ──────────────────
   hsls_hoan_thanh: boolean;
 
   // ── Miscellaneous ────────────────────────────────────────────────────────────
-  ghi_chu: string | null; // notes
+  ghi_chu: string | null;
 
   // ── Audit ────────────────────────────────────────────────────────────────────
   created_at: string;
-  created_by: string;  // user ID — never trust client clock
+  created_by: string;
   updated_at: string;
   updated_by: string;
 }

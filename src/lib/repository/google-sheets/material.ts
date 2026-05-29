@@ -8,8 +8,9 @@
 import type { Material } from "../../../types/index";
 import type { MaterialRepository } from "../types";
 import type { ListQuery } from "../../../types/api";
-import { readRange, cell, strOrNull } from "./base";
-import { cache, TTL, cacheKey, listCacheKey, hashQuery } from "../../cache";
+import { readRangeById, cell, strOrNull, queueUpdateById } from "./base";
+import { cache, TTL } from "../../cache";
+import { NGUYEN_LIEU_SHEETS_ID } from "../../plants/config";
 
 // ─── Column indices ───────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ const COL = {
   IMAGE: 3,
 } as const;
 
-const SHEET = "NguyenLieu";
+const SHEET = "Sheet1";
 const RANGE = `${SHEET}!A2:D`;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
@@ -30,7 +31,7 @@ export function rowToMaterial(row: string[]): Material {
     id: cell(row, COL.ID),
     ten: cell(row, COL.TEN),
     ten_khoa_hoc: cell(row, COL.TEN_KHOA_HOC),
-    image: strOrNull(row, COL.IMAGE),
+    image: toImageUrl(strOrNull(row, COL.IMAGE)),
   };
 }
 
@@ -40,13 +41,23 @@ export function materialToRow(m: Material): string[] {
 
 // ─── Repository ───────────────────────────────────────────────────────────────
 
-export function makeMaterialRepository(plantId: string): MaterialRepository {
+/** Convert AppSheet relative path to our Drive image proxy URL. */
+function toImageUrl(value: string | null): string | null {
+  if (!value) return null;
+  if (value.startsWith("http")) return value;
+  return `/api/drive-image?path=${encodeURIComponent(value)}`;
+}
+
+// Materials are shared across all plants — use a plant-neutral cache namespace.
+const CACHE_NS = "material:shared";
+
+export function makeMaterialRepository(_plantId: string): MaterialRepository {
   async function getAllMaterials(): Promise<Material[]> {
-    const listKey = listCacheKey("material", plantId, "all");
+    const listKey = `${CACHE_NS}:list`;
     const cached = cache.get<Material[]>(listKey);
     if (cached) return cached;
 
-    const rows = await readRange(plantId, RANGE);
+    const rows = await readRangeById(NGUYEN_LIEU_SHEETS_ID, RANGE);
     const materials = rows
       .filter((r) => r[COL.ID])
       .map(rowToMaterial);
@@ -68,7 +79,7 @@ export function makeMaterialRepository(plantId: string): MaterialRepository {
     },
 
     async get(_plantId: string, id: string): Promise<Material | null> {
-      const key = cacheKey("material", plantId, id);
+      const key = `${CACHE_NS}:${id}`;
       const cached = cache.get<Material>(key);
       if (cached) return cached;
 
@@ -79,16 +90,13 @@ export function makeMaterialRepository(plantId: string): MaterialRepository {
     },
 
     async update(_plantId: string, id: string, patch: Partial<Material>): Promise<Material> {
-      // Invalidate caches on write
-      cache.invalidate(`material:${plantId}:*`);
+      cache.invalidate(`${CACHE_NS}:*`);
       const all = await getAllMaterials();
       const idx = all.findIndex((m) => m.id === id);
       if (idx === -1) throw new Error(`Material ${id} not found`);
       const updated = { ...all[idx], ...patch };
-      // Write back (row idx+2 because row 1 is header)
-      const { queueUpdate } = await import("./base");
-      await queueUpdate(plantId, `${SHEET}!A${idx + 2}:D${idx + 2}`, [materialToRow(updated)]);
-      cache.invalidate(`material:${plantId}:*`);
+      await queueUpdateById(NGUYEN_LIEU_SHEETS_ID, `${SHEET}!A${idx + 2}:D${idx + 2}`, [materialToRow(updated)]);
+      cache.invalidate(`${CACHE_NS}:*`);
       return updated;
     },
   };

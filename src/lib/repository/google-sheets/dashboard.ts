@@ -21,8 +21,8 @@ const C_HSLS = 19;             // T
 const C_PHIEU_CAN_ID = 17;     // R
 const C_NHA_MAY = 1;           // B
 
-const SHEET = "DanhSachXeHang";
-const RANGE = `${SHEET}!A2:AZ`;
+const SHEET_BASE = "DanhSachXeHang";
+const range = (plantId: string) => `${SHEET_BASE}_${plantId}!A2:AZ`;
 
 function todayLocal(timezone: string): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: timezone }); // "YYYY-MM-DD"
@@ -38,7 +38,7 @@ export function makeDashboardRepository(plantId: string): DashboardRepository {
       const plant = getPlant(plantId);
       const today = todayLocal(plant.timezone);
 
-      const rows = await readRange(plantId, RANGE);
+      const rows = await readRange(plantId, range(plantId));
       const relevant = rows.filter(
         (r) => r[C_NHA_MAY] === plantId && r[0], // has an id
       );

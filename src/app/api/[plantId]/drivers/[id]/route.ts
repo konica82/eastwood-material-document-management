@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const user = await getSessionUser();
     if (!hasPlantAccess(user, plantId)) return forbiddenError();
 
-    const data = await getServerRepository("driver").get(plantId, id);
+    const data = await getServerRepository("driver", plantId).get(plantId, id);
     if (!data) return apiError("NOT_FOUND", `Không tìm thấy tài xế ${id}.`, 404);
     return ok(data);
   } catch (err) {
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const parsed = PatchDriverSchema.safeParse(await req.json());
     if (!parsed.success) return validationError(parsed.error.issues[0]?.message ?? 'Dữ liệu không hợp lệ');
 
-    const data = await getServerRepository("driver").update(plantId, id, parsed.data);
+    const data = await getServerRepository("driver", plantId).update(plantId, id, parsed.data);
     return ok(data);
   } catch (err) {
     return handleError(err);

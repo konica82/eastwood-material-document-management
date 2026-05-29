@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const user = await getSessionUser();
     if (!hasPlantAccess(user, plantId)) return forbiddenError();
 
-    const repo = getServerRepository("cargo");
+    const repo = getServerRepository("cargo", plantId);
     const data = await repo.get(plantId, id);
     if (!data) return apiError("NOT_FOUND", `Không tìm thấy chuyến hàng ${id}.`, 404);
     return ok(data);

@@ -5,11 +5,28 @@
  * They format values for Vietnamese UI display.
  */
 
+/**
+ * Parse a date string in either ISO format or AppSheet's dd/MM/yyyy HH:mm:ss format.
+ * Returns a valid Date or null.
+ */
+function parseDate(value: string): Date | null {
+  // AppSheet format: "21/03/2025 13:55:51"
+  const appSheet = value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (appSheet) {
+    const [, dd, mm, yyyy, hh = '0', min = '0', ss = '0'] = appSheet;
+    const d = new Date(+yyyy, +mm - 1, +dd, +hh, +min, +ss);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 /** Format an ISO timestamp as "dd/MM/yyyy". */
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   try {
-    const d = new Date(iso);
+    const d = parseDate(iso);
+    if (!d) return '—';
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yyyy = d.getFullYear();
@@ -23,7 +40,8 @@ export function fmtDate(iso: string | null | undefined): string {
 export function fmtTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   try {
-    const d = new Date(iso);
+    const d = parseDate(iso);
+    if (!d) return '—';
     const hh = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${hh}:${min}`;

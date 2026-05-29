@@ -163,25 +163,22 @@ function MaterialCard({ material }: { material: Material }) {
         transition: 'border-color var(--duration-fast) var(--ease-out)',
       }}
     >
-      {/* Image area */}
-      <div
-        style={{
-          aspectRatio: '4/3',
-          background: 'var(--color-bg-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      {/* Image area — fixed 4:3 ratio, cover crop */}
+      <div style={{ position: 'relative', paddingTop: '75%', background: 'var(--color-bg-subtle)' }}>
         {material.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={material.image}
             alt={material.ten}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <Package size={32} strokeWidth={1.25} style={{ color: 'var(--color-text-tertiary)' }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Package size={32} strokeWidth={1.25} style={{ color: 'var(--color-text-tertiary)' }} />
+          </div>
         )}
       </div>
 

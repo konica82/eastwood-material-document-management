@@ -69,20 +69,20 @@ function defaultPlantId(): string {
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
-export function getServerRepository(entity: "cargo"): CargoRepository;
-export function getServerRepository(entity: "weighing-slip"): WeighingSlipRepository;
-export function getServerRepository(entity: "driver"): DriverRepository;
-export function getServerRepository(entity: "material"): MaterialRepository;
-export function getServerRepository(entity: "supplier"): SupplierRepository;
-export function getServerRepository(entity: "plot"): PlotRepository;
-export function getServerRepository(entity: "activity-log"): ActivityLogRepository;
-export function getServerRepository(entity: "dashboard"): DashboardRepository;
-export function getServerRepository(entity: "user"): UserRepository;
-export function getServerRepository(entity: EntityName): RepositoryMap[EntityName];
+export function getServerRepository(entity: "cargo", plantId?: string): CargoRepository;
+export function getServerRepository(entity: "weighing-slip", plantId?: string): WeighingSlipRepository;
+export function getServerRepository(entity: "driver", plantId?: string): DriverRepository;
+export function getServerRepository(entity: "material", plantId?: string): MaterialRepository;
+export function getServerRepository(entity: "supplier", plantId?: string): SupplierRepository;
+export function getServerRepository(entity: "plot", plantId?: string): PlotRepository;
+export function getServerRepository(entity: "activity-log", plantId?: string): ActivityLogRepository;
+export function getServerRepository(entity: "dashboard", plantId?: string): DashboardRepository;
+export function getServerRepository(entity: "user", plantId?: string): UserRepository;
+export function getServerRepository(entity: EntityName, plantId?: string): RepositoryMap[EntityName];
 
-export function getServerRepository(entity: EntityName): RepositoryMap[EntityName] {
+export function getServerRepository(entity: EntityName, plantId?: string): RepositoryMap[EntityName] {
   if (isGoogleSheets()) {
-    const p = defaultPlantId();
+    const p = plantId ?? defaultPlantId();
     switch (entity) {
       case "cargo":         return makeCargoRepository(p);
       case "weighing-slip": return makeWeighingSlipRepository(p);
