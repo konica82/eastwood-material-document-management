@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, Upload, Plus, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { usePlant } from '@/contexts/PlantContext';
 import { cargoApi } from '@/lib/api-client';
@@ -61,8 +62,21 @@ function fmtDateRange(from: string, to: string) {
 
 export default function CargoPage() {
   const { activePlantId } = usePlant();
+  const router = useRouter();
   const [dateFrom, setDateFrom] = useState(todayISO);
   const [dateTo,   setDateTo]   = useState(todayISO);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+        setShowDatePicker(false);
+      }
+    }
+    if (showDatePicker) document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showDatePicker]);
 
   const { data: cargos = [], isLoading: loading } = useQuery({
     queryKey: ['cargo', activePlantId, dateFrom, dateTo],
@@ -172,10 +186,35 @@ export default function CargoPage() {
                 }}
               />
             </div>
-            <button style={secBtnSmStyle}>
-              <Calendar size={13} strokeWidth={1.75} />
-              {fmtDateRange(dateFrom, dateTo)}
-            </button>
+            <div ref={datePickerRef} style={{ position: 'relative' }}>
+              <button style={secBtnSmStyle} onClick={() => setShowDatePicker(v => !v)}>
+                <Calendar size={13} strokeWidth={1.75} />
+                {fmtDateRange(dateFrom, dateTo)}
+              </button>
+              {showDatePicker && (
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 50,
+                  background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)', padding: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                  display: 'flex', flexDirection: 'column', gap: 12, minWidth: 240,
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Từ ngày</label>
+                    <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                      style={{ height: 32, padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 13 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Đến ngày</label>
+                    <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                      style={{ height: 32, padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 13 }} />
+                  </div>
+                  <button onClick={() => setShowDatePicker(false)}
+                    style={{ height: 32, borderRadius: 'var(--radius-md)', border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                    Áp dụng
+                  </button>
+                </div>
+              )}
+            </div>
             <button style={secBtnSmStyle}>
               <SlidersHorizontal size={13} strokeWidth={1.75} />
               Bộ lọc
@@ -261,6 +300,7 @@ export default function CargoPage() {
 
 function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
   const [hovered, setHovered] = useState(false);
+  const router = useRouter();
   const net = c.phieu_can?.dlc_trong_luong_hang;
   const grossKg = c.phieu_can?.dlc_can_vao;
   const hasSecondary = !!c.nha_cung_cap_phu_id;
@@ -268,6 +308,7 @@ function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
 
   return (
     <tr
+      onClick={() => router.push(`/cargo/${c.id}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
