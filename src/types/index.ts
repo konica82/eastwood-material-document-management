@@ -303,8 +303,6 @@ export interface PlotRegistry {
   polygon?: PolygonCoordinate[];
   /** Populated on detail view. */
   documents?: PlotDocument[];
-  /** Populated on detail view — delivery history linked from AppSheet Transactions sheet. */
-  transactions?: PlotTransaction[];
 }
 
 export interface PlotOwner {
@@ -334,37 +332,6 @@ export interface PlotDocument {
   uploaded_by: string;
 }
 
-/**
- * One delivery transaction linking a plot to a cargo record.
- * AppSheet writes to this sheet; the app reads it to show cargo history per plot.
- *
- * Delivery IDs are plant-specific foreign keys into each plant's DanhSachXeHang sheet.
- * Only one of DeliveryNMCTID / DeliveryNMQMID / DeliveryNMXHID will be populated
- * per row (depending on which plant received the delivery).
- */
-export interface PlotTransaction {
-  TransactionID: string;
-  PlotID: string;
-  DeliveryDestination: string;       // e.g. "NMQM", "NMXH", "NMCT"
-  DeliveryNMCTID: string | null;
-  DeliveryNMQMID: string | null;
-  DeliveryNMXHID: string | null;
-  TransactionDate: string;
-  WeightSlip: string | null;
-  FromEntity: string | null;
-  ToEntity: string | null;
-  ProductType: string | null;
-  Quantity: number | null;
-  Unit: string | null;
-  HSCode: string | null;
-  DocumentRef: string | null;
-  ChainOfCustodyMethod: string | null;
-  BatchNumber: string | null;
-  Notes: string | null;
-  AddCount: number | null;
-  UpdatedDate: string | null;
-  UpdatedBy: string | null;
-}
 
 // ─── Dashboard metrics (Business Rules 7–12) ──────────────────────────────────
 
