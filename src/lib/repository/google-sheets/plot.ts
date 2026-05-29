@@ -1,7 +1,7 @@
 /**
- * Google Sheets adapter — PlotRegistry, PlotOwners, PolygonCoordinates, PlotDocuments.
+ * Google Sheets adapter — PlotRegistry, PlotDocuments, PlotOwners, PolygonCoordinates, Transactions.
  *
- * PlotRegistry columns (A–Z+):
+ * PlotRegistry columns (A–X):
  *   A=PlotID, B=LandTitle, C=AreaHa, D=TreeSpecies, E=DeforestationRiskStatus,
  *   F=ActualQuantityDelivered, G=nha_may, H=lat, I=lng, J=commune, K=district,
  *   L=province, M=planted_at, N=harvest_plan, O=rotation_years, P=density_per_ha,
@@ -11,6 +11,11 @@
  * PlotOwners: A=id, B=plot_id, C=ten, D=cccd, E=vai_tro, F=ty_le
  * PolygonCoordinates: A=id, B=plot_id, C=lat, D=lng, E=thu_tu
  * PlotDocuments: A=id, B=plot_id, C=ten_tai_lieu, D=loai, E=drive_url, F=uploaded_at, G=uploaded_by
+ * Transactions: A=TransactionID, B=PlotID, C=DeliveryDestination, D=DeliveryNMCTID,
+ *   E=DeliveryNMQMID, F=DeliveryNMXHID, G=TransactionDate, H=WeightSlip,
+ *   I=FromEntity, J=ToEntity, K=ProductType, L=Quantity, M=Unit, N=HSCode,
+ *   O=DocumentRef, P=ChainOfCustodyMethod, Q=BatchNumber, R=Notes,
+ *   S=AddCount, T=UpdatedDate, U=UpdatedBy
  */
 
 import type {
@@ -18,6 +23,7 @@ import type {
   PlotOwner,
   PolygonCoordinate,
   PlotDocument,
+  PlotTransaction,
   DeforestationRiskStatus,
 } from "../../../types/index";
 import type { PlotRepository } from "../types";
@@ -46,6 +52,16 @@ const SHEET = "PlotRegistry";
 const OWNERS_SHEET = "PlotOwners";
 const POLY_SHEET = "PolygonCoordinates";
 const DOCS_SHEET = "PlotDocuments";
+const TXN_SHEET = "Transactions";
+
+const T = {
+  TRANSACTION_ID: 0, PLOT_ID: 1, DELIVERY_DEST: 2,
+  DELIVERY_NMCT_ID: 3, DELIVERY_NMQM_ID: 4, DELIVERY_NMXH_ID: 5,
+  TRANSACTION_DATE: 6, WEIGHT_SLIP: 7, FROM_ENTITY: 8, TO_ENTITY: 9,
+  PRODUCT_TYPE: 10, QUANTITY: 11, UNIT: 12, HS_CODE: 13,
+  DOCUMENT_REF: 14, CHAIN_OF_CUSTODY: 15, BATCH_NUMBER: 16, NOTES: 17,
+  ADD_COUNT: 18, UPDATED_DATE: 19, UPDATED_BY: 20,
+} as const;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
@@ -140,6 +156,32 @@ function rowToDocument(row: string[]): PlotDocument {
   };
 }
 
+function rowToTransaction(row: string[]): PlotTransaction {
+  return {
+    TransactionID: cell(row, T.TRANSACTION_ID),
+    PlotID: cell(row, T.PLOT_ID),
+    DeliveryDestination: cell(row, T.DELIVERY_DEST),
+    DeliveryNMCTID: strOrNull(row, T.DELIVERY_NMCT_ID),
+    DeliveryNMQMID: strOrNull(row, T.DELIVERY_NMQM_ID),
+    DeliveryNMXHID: strOrNull(row, T.DELIVERY_NMXH_ID),
+    TransactionDate: cell(row, T.TRANSACTION_DATE),
+    WeightSlip: strOrNull(row, T.WEIGHT_SLIP),
+    FromEntity: strOrNull(row, T.FROM_ENTITY),
+    ToEntity: strOrNull(row, T.TO_ENTITY),
+    ProductType: strOrNull(row, T.PRODUCT_TYPE),
+    Quantity: numOrNull(row, T.QUANTITY),
+    Unit: strOrNull(row, T.UNIT),
+    HSCode: strOrNull(row, T.HS_CODE),
+    DocumentRef: strOrNull(row, T.DOCUMENT_REF),
+    ChainOfCustodyMethod: strOrNull(row, T.CHAIN_OF_CUSTODY),
+    BatchNumber: strOrNull(row, T.BATCH_NUMBER),
+    Notes: strOrNull(row, T.NOTES),
+    AddCount: numOrNull(row, T.ADD_COUNT),
+    UpdatedDate: strOrNull(row, T.UPDATED_DATE),
+    UpdatedBy: strOrNull(row, T.UPDATED_BY),
+  };
+}
+
 // ─── Repository ───────────────────────────────────────────────────────────────
 
 export function makePlotRepository(plantId: string): PlotRepository {
@@ -206,10 +248,11 @@ export function makePlotRepository(plantId: string): PlotRepository {
       const plot = all.find((p) => p.PlotID === plotId);
       if (!plot) return null;
 
-      const [ownerRows, coordRows, docRows] = await Promise.all([
+      const [ownerRows, coordRows, docRows, txnRows] = await Promise.all([
         readRangeById(LORUNG_SHEETS_ID, `${OWNERS_SHEET}!A2:F`),
         readRangeById(LORUNG_SHEETS_ID, `${POLY_SHEET}!A2:E`),
         readRangeById(LORUNG_SHEETS_ID, `${DOCS_SHEET}!A2:G`),
+        readRangeById(LORUNG_SHEETS_ID, `${TXN_SHEET}!A2:U`),
       ]);
 
       const result: PlotRegistry = {
@@ -220,6 +263,10 @@ export function makePlotRepository(plantId: string): PlotRepository {
           .map(rowToCoord)
           .sort((a, b) => a.thu_tu - b.thu_tu),
         documents: docRows.filter((r) => r[D.PLOT_ID] === plotId).map(rowToDocument),
+        transactions: txnRows
+          .filter((r) => r[T.PLOT_ID] === plotId && r[T.TRANSACTION_ID])
+          .map(rowToTransaction)
+          .sort((a, b) => a.TransactionDate.localeCompare(b.TransactionDate)),
       };
 
       cache.set(key, result, TTL.REFERENCE);

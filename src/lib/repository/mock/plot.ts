@@ -326,9 +326,10 @@ export const mockPlotRepository: PlotRepository = {
     if (!base) return null;
     return {
       ...base,
-      owners:    OWNERS.filter(o => o.plot_id === plotId),
-      polygon:   POLYGONS.filter(p => p.plot_id === plotId),
-      documents: DOCUMENTS.filter(d => d.plot_id === plotId),
+      owners:       OWNERS.filter(o => o.plot_id === plotId),
+      polygon:      POLYGONS.filter(p => p.plot_id === plotId),
+      documents:    DOCUMENTS.filter(d => d.plot_id === plotId),
+      transactions: [],
     };
   },
 };
