@@ -19,6 +19,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       filters: searchParams.get("trang_thai")
         ? { trang_thai: searchParams.get("trang_thai") }
         : undefined,
+      dateFrom: searchParams.get("dateFrom") ?? undefined,
+      dateTo:   searchParams.get("dateTo")   ?? undefined,
     };
     const repo = getServerRepository("cargo", plantId);
     const data = await repo.list(plantId, query);

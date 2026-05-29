@@ -49,11 +49,24 @@ const STATUS_COLORS: Record<CargoStatus, { bg: string; fg: string; border: strin
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function fmtDateRange(from: string, to: string) {
+  const f = from.slice(5).replace('-', '/');
+  const t = to.slice(5).replace('-', '/');
+  return f === t ? f : `${f} – ${t}`;
+}
+
 export default function CargoPage() {
   const { activePlantId } = usePlant();
+  const [dateFrom, setDateFrom] = useState(todayISO);
+  const [dateTo,   setDateTo]   = useState(todayISO);
+
   const { data: cargos = [], isLoading: loading } = useQuery({
-    queryKey: ['cargo', activePlantId],
-    queryFn: () => cargoApi.list(activePlantId),
+    queryKey: ['cargo', activePlantId, dateFrom, dateTo],
+    queryFn: () => cargoApi.list(activePlantId, { dateFrom, dateTo }),
   });
   const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
@@ -161,7 +174,7 @@ export default function CargoPage() {
             </div>
             <button style={secBtnSmStyle}>
               <Calendar size={13} strokeWidth={1.75} />
-              26/05 – 27/05
+              {fmtDateRange(dateFrom, dateTo)}
             </button>
             <button style={secBtnSmStyle}>
               <SlidersHorizontal size={13} strokeWidth={1.75} />

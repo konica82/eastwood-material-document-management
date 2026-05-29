@@ -29,8 +29,14 @@ function json(body: unknown): RequestInit {
 // ─── Cargo ────────────────────────────────────────────────────────────────────
 
 export const cargoApi = {
-  list: (plantId: string, trang_thai?: string) =>
-    apiFetch<Cargo[]>(`/api/${plantId}/cargo${trang_thai ? `?trang_thai=${encodeURIComponent(trang_thai)}` : ""}`),
+  list: (plantId: string, params?: { trang_thai?: string; dateFrom?: string; dateTo?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.trang_thai) q.set("trang_thai", params.trang_thai);
+    if (params?.dateFrom)   q.set("dateFrom", params.dateFrom);
+    if (params?.dateTo)     q.set("dateTo", params.dateTo);
+    const qs = q.toString();
+    return apiFetch<Cargo[]>(`/api/${plantId}/cargo${qs ? `?${qs}` : ""}`);
+  },
 
   get: (plantId: string, id: string) =>
     apiFetch<Cargo>(`/api/${plantId}/cargo/${id}`),

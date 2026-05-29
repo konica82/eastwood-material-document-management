@@ -21,6 +21,19 @@ import { readRange, cell, numOrNull, boolCell, strOrNull, queueUpdate, appendRow
 import { cache, TTL, cacheKey, listCacheKey, hashQuery } from "../../cache";
 import { randomUUID } from "crypto";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Parse AppSheet dd/MM/yyyy HH:mm:ss or ISO yyyy-MM-dd HH:mm:ss into a Date. */
+function parseAppSheetDate(value: string): Date | null {
+  if (!value) return null;
+  const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]);
+  // Also handle ISO prefix like "2025-03-21 00:00:00"
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3], +iso[4], +iso[5], +iso[6]);
+  return null;
+}
+
 // ─── Column indices ───────────────────────────────────────────────────────────
 
 // Column layout matches actual AppSheet sheet (A=0 … Z=25):
@@ -179,6 +192,17 @@ export function makeCargoRepository(plantId: string): CargoRepository {
 
       let all = await getAllCargos();
 
+      if (query?.dateFrom || query?.dateTo) {
+        const from = query.dateFrom ? parseAppSheetDate(query.dateFrom + " 00:00:00") : null;
+        const to   = query.dateTo   ? parseAppSheetDate(query.dateTo   + " 23:59:59") : null;
+        all = all.filter((c) => {
+          const d = parseAppSheetDate(c.created_at);
+          if (!d) return false;
+          if (from && d < from) return false;
+          if (to   && d > to)   return false;
+          return true;
+        });
+      }
       if (query?.filters?.trang_thai) {
         all = all.filter((c) => c.trang_thai === query.filters!.trang_thai);
       }

@@ -16,6 +16,10 @@ export interface ListQuery {
   filters?: Record<string, string | number | boolean | null>;
   sortBy?: string;
   sortDir?: "asc" | "desc";
+  /** ISO date string (YYYY-MM-DD) — inclusive lower bound on created_at. */
+  dateFrom?: string;
+  /** ISO date string (YYYY-MM-DD) — inclusive upper bound on created_at. */
+  dateTo?: string;
 }
 
 // ─── Plant scoping ────────────────────────────────────────────────────────────
