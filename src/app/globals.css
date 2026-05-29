@@ -184,6 +184,18 @@ body {
   to   { opacity: 1; transform: translateY(0)   scale(1);    }
 }
 
+/* Slide-over drawer (enters from the right). */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+
+/* Backdrop fade for modals / drawers. */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Respect reduced motion app-wide. */
 @media (prefers-reduced-motion: reduce) {
   *,

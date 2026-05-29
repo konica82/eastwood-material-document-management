@@ -15,6 +15,12 @@
 
 export type Role = "User" | "Manager" | "Admin";
 
+/** Driver record status — set by the gate AppSheet app, readable/editable in web. */
+export type DriverStatus = "active" | "expiring" | "suspended" | "pending";
+
+/** GPLX (driver's licence) class — Vietnamese road-transport categories. */
+export type LicenseClass = "B2" | "C" | "E" | "FC";
+
 export type CargoStatus =
   | "Chờ lượt"      // waiting at gate
   | "Đang xử lý"   // weighing / in progress
@@ -85,6 +91,28 @@ export interface Driver {
   completedDeliveries: number;
   created_at: string;    // ISO 8601
   updated_at: string;
+
+  // ── Gate-app fields (populated by the security-gate AppSheet app) ────────────
+  /** GPLX (driver's licence) number — monospace in UI. */
+  gplx?: string;
+  /** GPLX licence class — B2 / C / E / FC. */
+  hang_gplx?: LicenseClass;
+  /** GPLX expiry date — ISO 8601 date string (YYYY-MM-DD). */
+  han_gplx?: string;
+  /** Home province/region — displayed as part of driver identity. */
+  khu_vuc?: string;
+  /** Date the driver joined the fleet — ISO 8601 date string. */
+  ngay_vao?: string;
+  /** Operational status set by the gate app. */
+  trang_thai_tai_xe?: DriverStatus;
+  /** Deliveries in the last 30 days (query-time aggregate, pre-baked in mock). */
+  trips30?: number;
+  /** Net cargo weight in kg over the last 30 days (query-time aggregate). */
+  kg30?: number;
+  /** All-time total completed trips. */
+  totalTrips?: number;
+  /** All vehicle plates used (primary + any extras the gate app records). */
+  all_plates?: string[];
 }
 
 // ─── Material (NguyenLieu) ────────────────────────────────────────────────────
