@@ -2,12 +2,13 @@
  * Google Sheets adapter — PlotRegistry, PlotDocuments, PlotOwners, PolygonCoordinates.
  * All sheets live in the shared Lô Rừng spreadsheet (SHEETS_ID_LORUNG), managed by AppSheet.
  *
- * PlotRegistry columns (A–X):
- *   A=PlotID, B=LandTitle, C=AreaHa, D=TreeSpecies, E=DeforestationRiskStatus,
- *   F=ActualQuantityDelivered, G=nha_may, H=lat, I=lng, J=commune, K=district,
- *   L=province, M=planted_at, N=harvest_plan, O=rotation_years, P=density_per_ha,
- *   Q=prev_harvests, R=elevation_m, S=slope_deg, T=soil_type, U=certificate,
- *   V=cert_id, W=created_at, X=updated_at
+ * PlotRegistry columns (A=0 … Z=25):
+ *   A=PlotID, B=OwnerCount, C=LandTitle, D=AreaHa, E=GeolocationTypes,
+ *   F=CenterLatitude, G=CenterLongitude, H=TreeSpecies, I=ScientificName,
+ *   J=PlantedYear, K=HarvestDate, L=HarvestEndDate, M=VolumeM3, N=QuantityTon,
+ *   O=CountryOfProduction, P=Province, Q=District, R=Commune, S=Certifications,
+ *   T=DeforestationRiskStatus, U=RiskScore, V=VerificationDate, W=ValidationStatus,
+ *   X=Image, Y=ImagesUrl, Z=Notes
  *
  * PlotOwners: A=id, B=plot_id, C=ten, D=cccd, E=vai_tro, F=ty_le
  * PolygonCoordinates: A=id, B=plot_id, C=lat, D=lng, E=thu_tu
@@ -30,14 +31,15 @@ import { LORUNG_SHEETS_ID } from "../../plants/config";
 // ─── Column indices ───────────────────────────────────────────────────────────
 
 const R = {
-  PLOT_ID: 0, LAND_TITLE: 1, AREA_HA: 2, TREE_SPECIES: 3, DEFO_RISK: 4,
-  ACTUAL_QTY: 5, NHA_MAY: 6, LAT: 7, LNG: 8, COMMUNE: 9, DISTRICT: 10,
-  PROVINCE: 11, PLANTED_AT: 12, HARVEST_PLAN: 13, ROTATION_YEARS: 14,
-  DENSITY_PER_HA: 15, PREV_HARVESTS: 16, ELEVATION_M: 17, SLOPE_DEG: 18,
-  SOIL_TYPE: 19, CERTIFICATE: 20, CERT_ID: 21, CREATED_AT: 22, UPDATED_AT: 23,
+  PLOT_ID: 0, OWNER_COUNT: 1, LAND_TITLE: 2, AREA_HA: 3, GEO_TYPES: 4,
+  LAT: 5, LNG: 6, TREE_SPECIES: 7, SCIENTIFIC_NAME: 8, PLANTED_YEAR: 9,
+  HARVEST_DATE: 10, HARVEST_END: 11, VOLUME_M3: 12, QUANTITY_TON: 13,
+  COUNTRY: 14, PROVINCE: 15, DISTRICT: 16, COMMUNE: 17, CERTIFICATIONS: 18,
+  DEFO_RISK: 19, RISK_SCORE: 20, VERIFICATION_DATE: 21, VALIDATION_STATUS: 22,
+  IMAGE: 23, IMAGES_URL: 24, NOTES: 25,
 } as const;
 
-const R_LEN = 24;
+const R_LEN = 26;
 
 const O = { ID: 0, PLOT_ID: 1, TEN: 2, CCCD: 3, VAI_TRO: 4, TY_LE: 5 } as const;
 const C = { ID: 0, PLOT_ID: 1, LAT: 2, LNG: 3, THU_TU: 4 } as const;
@@ -56,26 +58,26 @@ export function rowToPlot(row: string[]): PlotRegistry {
     LandTitle: cell(row, R.LAND_TITLE),
     AreaHa: numCell(row, R.AREA_HA),
     TreeSpecies: cell(row, R.TREE_SPECIES),
-    DeforestationRiskStatus: cell(row, R.DEFO_RISK) as DeforestationRiskStatus,
-    ActualQuantityDelivered: numCell(row, R.ACTUAL_QTY),
-    nha_may: cell(row, R.NHA_MAY),
+    DeforestationRiskStatus: (strOrNull(row, R.DEFO_RISK) ?? 'Chưa đánh giá') as DeforestationRiskStatus,
+    ActualQuantityDelivered: numCell(row, R.QUANTITY_TON),
+    nha_may: "",  // shared sheet — no plant filter
     lat: numOrNull(row, R.LAT),
     lng: numOrNull(row, R.LNG),
     commune: strOrNull(row, R.COMMUNE),
     district: strOrNull(row, R.DISTRICT),
     province: strOrNull(row, R.PROVINCE),
-    planted_at: strOrNull(row, R.PLANTED_AT),
-    harvest_plan: strOrNull(row, R.HARVEST_PLAN),
-    rotation_years: numOrNull(row, R.ROTATION_YEARS),
-    density_per_ha: numOrNull(row, R.DENSITY_PER_HA),
-    prev_harvests: numCell(row, R.PREV_HARVESTS),
-    elevation_m: numOrNull(row, R.ELEVATION_M),
-    slope_deg: numOrNull(row, R.SLOPE_DEG),
-    soil_type: strOrNull(row, R.SOIL_TYPE),
-    certificate: strOrNull(row, R.CERTIFICATE),
-    cert_id: strOrNull(row, R.CERT_ID),
-    created_at: cell(row, R.CREATED_AT),
-    updated_at: cell(row, R.UPDATED_AT),
+    planted_at: strOrNull(row, R.PLANTED_YEAR),
+    harvest_plan: strOrNull(row, R.HARVEST_DATE),
+    rotation_years: null,
+    density_per_ha: null,
+    prev_harvests: 0,
+    elevation_m: null,
+    slope_deg: null,
+    soil_type: null,
+    certificate: strOrNull(row, R.CERTIFICATIONS),
+    cert_id: strOrNull(row, R.VALIDATION_STATUS),
+    created_at: strOrNull(row, R.VERIFICATION_DATE) ?? "",
+    updated_at: strOrNull(row, R.VERIFICATION_DATE) ?? "",
   };
 }
 
@@ -86,25 +88,16 @@ export function plotToRow(p: PlotRegistry): string[] {
   row[R.AREA_HA] = String(p.AreaHa);
   row[R.TREE_SPECIES] = p.TreeSpecies;
   row[R.DEFO_RISK] = p.DeforestationRiskStatus;
-  row[R.ACTUAL_QTY] = String(p.ActualQuantityDelivered);
-  row[R.NHA_MAY] = p.nha_may;
+  row[R.QUANTITY_TON] = String(p.ActualQuantityDelivered);
   row[R.LAT] = p.lat != null ? String(p.lat) : "";
   row[R.LNG] = p.lng != null ? String(p.lng) : "";
   row[R.COMMUNE] = p.commune ?? "";
   row[R.DISTRICT] = p.district ?? "";
   row[R.PROVINCE] = p.province ?? "";
-  row[R.PLANTED_AT] = p.planted_at ?? "";
-  row[R.HARVEST_PLAN] = p.harvest_plan ?? "";
-  row[R.ROTATION_YEARS] = p.rotation_years != null ? String(p.rotation_years) : "";
-  row[R.DENSITY_PER_HA] = p.density_per_ha != null ? String(p.density_per_ha) : "";
-  row[R.PREV_HARVESTS] = String(p.prev_harvests);
-  row[R.ELEVATION_M] = p.elevation_m != null ? String(p.elevation_m) : "";
-  row[R.SLOPE_DEG] = p.slope_deg != null ? String(p.slope_deg) : "";
-  row[R.SOIL_TYPE] = p.soil_type ?? "";
-  row[R.CERTIFICATE] = p.certificate ?? "";
-  row[R.CERT_ID] = p.cert_id ?? "";
-  row[R.CREATED_AT] = p.created_at;
-  row[R.UPDATED_AT] = p.updated_at;
+  row[R.PLANTED_YEAR] = p.planted_at ?? "";
+  row[R.HARVEST_DATE] = p.harvest_plan ?? "";
+  row[R.CERTIFICATIONS] = p.certificate ?? "";
+  row[R.VALIDATION_STATUS] = p.cert_id ?? "";
   return row;
 }
 
@@ -149,9 +142,9 @@ export function makePlotRepository(plantId: string): PlotRepository {
     const cached = cache.get<PlotRegistry[]>(key);
     if (cached) return cached;
 
-    const rows = await readRangeById(LORUNG_SHEETS_ID, `${SHEET}!A2:X`);
+    const rows = await readRangeById(LORUNG_SHEETS_ID, `${SHEET}!A2:Z`);
     const plots = rows
-      .filter((r) => r[R.PLOT_ID] && r[R.NHA_MAY] === plantId)
+      .filter((r) => r[R.PLOT_ID])   // skip blank rows
       .map(rowToPlot);
 
     cache.set(key, plots, TTL.REFERENCE);
@@ -184,7 +177,7 @@ export function makePlotRepository(plantId: string): PlotRepository {
 
     async update(_plantId: string, id: string, patch: Partial<PlotRegistry>): Promise<PlotRegistry> {
       cache.invalidate(`plot:${plantId}:*`);
-      const rows = await readRangeById(LORUNG_SHEETS_ID, `${SHEET}!A2:X`);
+      const rows = await readRangeById(LORUNG_SHEETS_ID, `${SHEET}!A2:Z`);
       const idx = rows.findIndex((r) => r[R.PLOT_ID] === id);
       if (idx === -1) throw new Error(`Plot ${id} not found`);
 
