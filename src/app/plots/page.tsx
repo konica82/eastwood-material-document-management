@@ -32,8 +32,8 @@ const RISK_TONE: Record<DeforestationRiskStatus, 'success' | 'warning' | 'danger
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type RiskFilter = 'all' | DeforestationRiskStatus;
-type ViewMode   = 'list' | 'map';
+type FilterKey = 'all' | 'duoi4ha' | 'tren4ha' | string; // string covers province names
+type ViewMode  = 'list' | 'map';
 
 export default function PlotsPage() {
   const router = useRouter();
@@ -44,20 +44,23 @@ export default function PlotsPage() {
     queryKey: ['plots', activePlantId],
     queryFn: () => plotApi.list(activePlantId),
   });
-  const [search,     setSearch]     = useState('');
-  const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
-  const [view,       setView]       = useState<ViewMode>('list');
+  const [search,    setSearch]    = useState('');
+  const [filterKey, setFilterKey] = useState<FilterKey>('all');
+  const [view,      setView]      = useState<ViewMode>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const counts = useMemo(() => {
-    const m: Record<string, number> = { all: plots.length };
-    for (const p of plots) m[p.DeforestationRiskStatus] = (m[p.DeforestationRiskStatus] ?? 0) + 1;
-    return m;
+  // Unique sorted province names derived from data
+  const provinces = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of plots) if (p.province) set.add(p.province);
+    return [...set].sort((a, b) => a.localeCompare(b, 'vi'));
   }, [plots]);
 
   const filtered = useMemo(() => {
     let rows = [...plots];
-    if (riskFilter !== 'all') rows = rows.filter(p => p.DeforestationRiskStatus === riskFilter);
+    if (filterKey === 'duoi4ha')      rows = rows.filter(p => p.AreaHa < 4);
+    else if (filterKey === 'tren4ha') rows = rows.filter(p => p.AreaHa >= 4);
+    else if (filterKey !== 'all')     rows = rows.filter(p => p.province === filterKey);
     if (search.trim()) {
       const q = search.toLowerCase();
       rows = rows.filter(p =>
@@ -69,7 +72,7 @@ export default function PlotsPage() {
       );
     }
     return rows;
-  }, [plots, riskFilter, search]);
+  }, [plots, filterKey, search]);
 
   const selected = useMemo(
     () => plots.find(p => p.PlotID === selectedId) ?? null,
@@ -127,15 +130,16 @@ export default function PlotsPage() {
           />
         </div>
         <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
-        {(['all', 'Thấp', 'Trung bình', 'Cao'] as RiskFilter[]).map(key => (
-          <RiskChip
-            key={key}
-            riskKey={key}
-            count={counts[key] ?? 0}
-            active={riskFilter === key}
-            onClick={() => setRiskFilter(key)}
-          />
+        {/* Tất cả */}
+        <FilterChipNew label="Tất cả" count={plots.length} active={filterKey === 'all'} onClick={() => setFilterKey('all')} />
+        {/* Provinces */}
+        {provinces.map(p => (
+          <FilterChipNew key={p} label={p.replace('Tỉnh ', '').replace('Thành phố ', 'TP ')} count={plots.filter(pl => pl.province === p).length} active={filterKey === p} onClick={() => setFilterKey(p)} />
         ))}
+        <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
+        {/* Area */}
+        <FilterChipNew label="Dưới 4 ha" count={plots.filter(p => p.AreaHa < 4).length} active={filterKey === 'duoi4ha'} onClick={() => setFilterKey('duoi4ha')} />
+        <FilterChipNew label="Trên 4 ha" count={plots.filter(p => p.AreaHa >= 4).length} active={filterKey === 'tren4ha'} onClick={() => setFilterKey('tren4ha')} />
       </div>
 
       {/* ── Content area ── */}
@@ -208,7 +212,7 @@ function ViewBtn({ active, onClick, icon, label }: {
 // ─── Risk filter chip ─────────────────────────────────────────────────────────
 
 function RiskChip({ riskKey, count, active, onClick }: {
-  riskKey: RiskFilter; count: number; active: boolean; onClick: () => void;
+  riskKey: string; count: number; active: boolean; onClick: () => void;
 }) {
   const label = riskKey === 'all' ? 'Tất cả' : RISK_LABEL[riskKey as DeforestationRiskStatus];
   const tone  = riskKey === 'all' ? null : RISK_TONE[riskKey as DeforestationRiskStatus];
@@ -235,6 +239,30 @@ function RiskChip({ riskKey, count, active, onClick }: {
       )}
       {label}
       <span style={{ fontSize: 11, fontWeight: 500, color: active ? fg : 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function FilterChipNew({ label, count, active, onClick }: {
+  label: string; count: number; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      height: 28, padding: '0 10px',
+      borderRadius: 'var(--radius-full)',
+      border: active ? '1.5px solid var(--color-accent)' : '1.5px solid var(--color-border)',
+      background: active ? 'var(--color-accent-subtle)' : 'transparent',
+      color: active ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+      fontSize: 'var(--font-size-sm)', fontWeight: active ? 500 : 400,
+      cursor: 'pointer',
+      transition: 'all var(--duration-fast) var(--ease-out)',
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+      <span style={{ fontSize: 11, fontWeight: 500, color: active ? 'var(--color-accent)' : 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>
         {count}
       </span>
     </button>
