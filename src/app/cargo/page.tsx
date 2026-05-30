@@ -334,33 +334,43 @@ function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
         transition: 'background 100ms ease-out',
       }}
     >
-      {/* STT */}
-      <td style={{ ...tdStyle(), textAlign: 'center', color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-        {c.stt_tai ?? '—'}
-      </td>
+      {/* STT — stripe + icon */}
+      {(() => {
+        const cfg = c.loai_xe ? VEHICLE_CONFIG[c.loai_xe] : null;
+        return (
+          <td style={{
+            ...tdStyle(),
+            textAlign: 'center',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            boxShadow: `inset 3px 0 0 ${
+              c.loai_xe === 'Đầu kéo' ? 'var(--color-info)' :
+              c.loai_xe === 'Máy cày' ? 'var(--color-warning)' :
+              'var(--color-border)'
+            }`,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              {cfg && <cfg.Icon size={14} stroke={1.5} style={{ color: cfg.color }} />}
+              <span style={{ color: 'var(--color-text-tertiary)' }}>{c.stt_tai ?? '—'}</span>
+            </div>
+          </td>
+        );
+      })()}
 
-      {/* Biển số + vehicle type icon inline */}
+      {/* Biển số */}
       <td style={tdStyle()}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {(() => {
-            const cfg = c.loai_xe ? VEHICLE_CONFIG[c.loai_xe] : null;
-            return cfg ? <cfg.Icon size={16} stroke={1.5} style={{ color: cfg.color, flexShrink: 0 }} /> : null;
-          })()}
-          <div>
-            <Link
-              href={`/cargo/${c.id}`}
-              onClick={e => e.stopPropagation()}
-              style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
-            >
-              {c.so_xe}
-            </Link>
-            {c.so_mooc && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
-                {c.so_mooc}
-              </div>
-            )}
+        <Link
+          href={`/cargo/${c.id}`}
+          onClick={e => e.stopPropagation()}
+          style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
+        >
+          {c.so_xe}
+        </Link>
+        {c.so_mooc && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
+            {c.so_mooc}
           </div>
-        </div>
+        )}
       </td>
 
       {/* Tài xế: name + CCCD */}
