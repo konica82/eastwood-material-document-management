@@ -231,9 +231,11 @@ export default function CargoPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: 'var(--color-table-header-bg)' }}>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', width: 48 }}>STT</th>
                     <SortTh col="so_xe"        sort={sortBy} onSort={toggleSort} width={140}>Biển số</SortTh>
                     <SortTh col="tai_xe"       sort={sortBy} onSort={toggleSort}>Tài xế</SortTh>
                     <SortTh col="nguyen_lieu"  sort={sortBy} onSort={toggleSort}>Nguyên liệu</SortTh>
+                    <th style={{ padding: '10px 14px', fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>Loại NL</th>
                     <SortTh col="nha_cung_cap" sort={sortBy} onSort={toggleSort}>Nhà cung cấp chính</SortTh>
                     <th style={{ padding: '10px 14px', textAlign: 'right', fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', width: 120 }}>Khối lượng</th>
                     <SortTh col="trang_thai"  sort={sortBy} onSort={toggleSort} width={130}>Trạng thái</SortTh>
@@ -246,7 +248,7 @@ export default function CargoPage() {
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ padding: '60px 20px', textAlign: 'center' }}>
+                      <td colSpan={9} style={{ padding: '60px 20px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                           <Truck size={28} style={{ color: 'var(--color-text-tertiary)' }} />
                           <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, margin: 0 }}>
@@ -319,14 +321,25 @@ function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
         transition: 'background 100ms ease-out',
       }}
     >
-      {/* Biển số */}
+      {/* STT */}
+      <td style={{ ...tdStyle(), textAlign: 'center', color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+        {c.stt_tai ?? '—'}
+      </td>
+
+      {/* Biển số + mooc */}
       <td style={tdStyle()}>
         <Link
           href={`/cargo/${c.id}`}
+          onClick={e => e.stopPropagation()}
           style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
         >
           {c.so_xe}
         </Link>
+        {c.so_mooc && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
+            {c.so_mooc}
+          </div>
+        )}
       </td>
 
       {/* Tài xế: name + CCCD */}
@@ -341,6 +354,9 @@ function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
 
       {/* Nguyên liệu */}
       <td style={tdStyle()}>{c.nguyen_lieu?.ten ?? '—'}</td>
+
+      {/* Loại nguyên liệu */}
+      <td style={{ ...tdStyle(), color: 'var(--color-text-secondary)', fontSize: 12 }}>{c.loai_nguyen_lieu ?? '—'}</td>
 
       {/* Nhà cung cấp: name + NCC phụ count */}
       <td style={tdStyle()}>
