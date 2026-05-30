@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { Wrapper } from '@googlemaps/react-wrapper';
 import {
-  Search, List, Map, ChevronRight, X,
+  Search, List, Map as MapIcon, ChevronRight, X,
   AlertTriangle, CheckCircle, AlertCircle,
   Trees, MapPin, ExternalLink,
 } from 'lucide-react';
@@ -16,15 +17,17 @@ import type { PlotRegistry, DeforestationRiskStatus } from '@/types/index';
 // ─── Risk helpers ─────────────────────────────────────────────────────────────
 
 const RISK_LABEL: Record<DeforestationRiskStatus, string> = {
-  'Thấp':      'Rủi ro thấp',
-  'Trung bình':'Rủi ro vừa',
-  'Cao':       'Rủi ro cao',
+  'Thấp':           'Rủi ro thấp',
+  'Trung bình':     'Rủi ro vừa',
+  'Cao':            'Rủi ro cao',
+  'Chưa đánh giá':  'Chưa đánh giá',
 };
 
 const RISK_TONE: Record<DeforestationRiskStatus, 'success' | 'warning' | 'danger'> = {
-  'Thấp':      'success',
-  'Trung bình':'warning',
-  'Cao':       'danger',
+  'Thấp':           'success',
+  'Trung bình':     'warning',
+  'Cao':            'danger',
+  'Chưa đánh giá':  'success',
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -96,7 +99,7 @@ export default function PlotsPage() {
             border: '1px solid var(--color-border)',
           }}>
             <ViewBtn active={view === 'list'} onClick={() => setView('list')} icon={<List   size={13} strokeWidth={1.75} />} label="Danh sách" />
-            <ViewBtn active={view === 'map'}  onClick={() => setView('map')}  icon={<Map    size={13} strokeWidth={1.75} />} label="Bản đồ"    />
+            <ViewBtn active={view === 'map'}  onClick={() => setView('map')}  icon={<MapIcon size={13} strokeWidth={1.75} />} label="Bản đồ"    />
           </div>
           {canEdit && (
             <button style={primBtnStyle} disabled title="Chức năng tạo mới có trong AppSheet">
@@ -358,18 +361,138 @@ function PlotsTableRow({ plot: p, selected, onSelect, onOpen }: {
   );
 }
 
-// ─── Plots map (SVG) ──────────────────────────────────────────────────────────
+// ─── Plots map (Google Maps) ───────────────────────────────────────────────────
 
-const SVG_W = 800;
-const SVG_H = 460;
-const SVG_PAD = 50;
+const RISK_PIN_COLOR: Record<DeforestationRiskStatus, string> = {
+  'Thấp':      '#22c55e',
+  'Trung bình': '#f59e0b',
+  'Cao':        '#ef4444',
+  'Chưa đánh giá': '#6b7280',
+};
 
-function projectPlot(lat: number, lng: number, bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number }) {
-  const lngRange = bounds.maxLng - bounds.minLng || 1;
-  const latRange = bounds.maxLat - bounds.minLat || 1;
-  const x = SVG_PAD + ((lng - bounds.minLng) / lngRange) * (SVG_W - 2 * SVG_PAD);
-  const y = (SVG_H - SVG_PAD) - ((lat - bounds.minLat) / latRange) * (SVG_H - 2 * SVG_PAD);
-  return { x, y };
+function makePinSvg(color: string, selected: boolean): string {
+  const size = selected ? 14 : 10;
+  const stroke = selected ? 'white' : 'rgba(0,0,0,0.3)';
+  const sw = selected ? 2 : 1;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size*2}" height="${size*2}" viewBox="0 0 ${size*2} ${size*2}">
+      <circle cx="${size}" cy="${size}" r="${size - sw}" fill="${color}" stroke="${stroke}" stroke-width="${sw}"/>
+    </svg>`
+  )}`;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type GMap = any;
+type GMarker = any;
+
+function GoogleMapView({ plots, selectedId, onSelect, onOpen }: {
+  plots: PlotRegistry[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onOpen: (id: string) => void;
+}) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const gmap = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markers = useRef(new Map() as Map<string, any>);
+  const validPlots = plots.filter(p => p.lat != null && p.lng != null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const G = (): any => (window as any).google?.maps;
+
+  // Init map
+  useEffect(() => {
+    if (!mapRef.current || gmap.current) return;
+    gmap.current = new (G().Map)(mapRef.current, {
+      zoom: 8,
+      center: { lat: 11.0, lng: 106.7 },
+      mapTypeId: 'hybrid',
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      zoomControl: true,
+    });
+  }, []);
+
+  // Sync markers whenever plots or selection changes
+  useEffect(() => {
+    if (!gmap.current) return;
+    const map = gmap.current;
+    const g = G();
+    const currentIds = new Set(validPlots.map(p => p.PlotID));
+
+    // Remove stale markers
+    markers.current.forEach((m, id) => {
+      if (!currentIds.has(id)) { m.setMap(null); markers.current.delete(id); }
+    });
+
+    // Add/update markers
+    validPlots.forEach(p => {
+      const color = RISK_PIN_COLOR[p.DeforestationRiskStatus] ?? '#6b7280';
+      const isSelected = p.PlotID === selectedId;
+      const sz = isSelected ? 28 : 20;
+      const icon = {
+        url: makePinSvg(color, isSelected),
+        scaledSize: new g.Size(sz, sz),
+        anchor: new g.Point(sz / 2, sz / 2),
+      };
+
+      let marker = markers.current.get(p.PlotID);
+      if (!marker) {
+        marker = new g.Marker({
+          position: { lat: p.lat!, lng: p.lng! },
+          map,
+          title: `${p.PlotID} — ${p.TreeSpecies} — ${p.AreaHa} ha`,
+          icon,
+        });
+        marker.addListener('click', () => onSelect(p.PlotID));
+        marker.addListener('dblclick', () => onOpen(p.PlotID));
+        markers.current.set(p.PlotID, marker);
+      } else {
+        marker.setIcon(icon);
+      }
+    });
+
+    // Fit bounds on first load
+    if (validPlots.length > 0 && markers.current.size === validPlots.length) {
+      const bounds = new g.LatLngBounds();
+      validPlots.forEach(p => bounds.extend({ lat: p.lat!, lng: p.lng! }));
+      map.fitBounds(bounds, 60);
+    }
+  }, [validPlots, selectedId, onSelect, onOpen]);
+
+  return (
+    <div style={{ position: 'relative', height: 500 }}>
+      <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }} />
+
+      {/* Legend */}
+      <div style={{
+        position: 'absolute', bottom: 28, left: 12, zIndex: 1,
+        padding: '10px 12px', borderRadius: 'var(--radius-md)',
+        background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        fontSize: 12,
+      }}>
+        <div style={{ fontSize: 11, color: '#666', marginBottom: 6, fontWeight: 600 }}>Rủi ro phá rừng</div>
+        {(['Thấp', 'Trung bình', 'Cao', 'Chưa đánh giá'] as DeforestationRiskStatus[]).map(r => (
+          <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: RISK_PIN_COLOR[r], flexShrink: 0 }} />
+            <span style={{ color: '#444' }}>{RISK_LABEL[r] ?? r}</span>
+          </div>
+        ))}
+      </div>
+
+      {validPlots.length < plots.length && (
+        <div style={{
+          position: 'absolute', bottom: 28, right: 12, zIndex: 1,
+          fontSize: 11, color: '#666', background: 'white',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+        }}>
+          {plots.length - validPlots.length} lô chưa có toạ độ
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PlotsMap({ plots, selectedId, onSelect, onOpen }: {
@@ -378,105 +501,11 @@ function PlotsMap({ plots, selectedId, onSelect, onOpen }: {
   onSelect: (id: string) => void;
   onOpen: (id: string) => void;
 }) {
-  const validPlots = plots.filter(p => p.lat != null && p.lng != null);
-
-  const bounds = useMemo(() => {
-    if (!validPlots.length) return { minLat: 10, maxLat: 25, minLng: 100, maxLng: 115 };
-    const lats = validPlots.map(p => p.lat!);
-    const lngs = validPlots.map(p => p.lng!);
-    const padLat = (Math.max(...lats) - Math.min(...lats)) * 0.15 || 0.1;
-    const padLng = (Math.max(...lngs) - Math.min(...lngs)) * 0.15 || 0.1;
-    return {
-      minLat: Math.min(...lats) - padLat,
-      maxLat: Math.max(...lats) + padLat,
-      minLng: Math.min(...lngs) - padLng,
-      maxLng: Math.max(...lngs) + padLng,
-    };
-  }, [validPlots]);
-
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
   return (
-    <div style={{ position: 'relative', height: 500 }}>
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ width: '100%', height: '100%', display: 'block' }}
-      >
-        <defs>
-          <pattern id="map-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--color-border)" strokeWidth="0.5" />
-          </pattern>
-        </defs>
-        <rect width={SVG_W} height={SVG_H} fill="var(--color-bg-subtle)" />
-        <rect width={SVG_W} height={SVG_H} fill="url(#map-grid)" />
-
-        {validPlots.map(p => {
-          const { x, y } = projectPlot(p.lat!, p.lng!, bounds);
-          const tone = RISK_TONE[p.DeforestationRiskStatus];
-          const isSelected = p.PlotID === selectedId;
-          const r = Math.max(14, Math.min(28, Math.sqrt(p.AreaHa) * 5));
-
-          return (
-            <g
-              key={p.PlotID}
-              onClick={() => onSelect(p.PlotID)}
-              onDoubleClick={() => onOpen(p.PlotID)}
-              style={{ cursor: 'pointer' }}
-            >
-              <circle
-                cx={x} cy={y} r={r}
-                fill={`var(--color-${tone}-subtle)`}
-                fillOpacity={isSelected ? 0.95 : 0.7}
-                stroke={`var(--color-${tone})`}
-                strokeWidth={isSelected ? 2.5 : 1.5}
-              />
-              <text
-                x={x} y={y + 4}
-                fontSize="9"
-                fill={`var(--color-${tone})`}
-                textAnchor="middle"
-                fontFamily="var(--font-mono)"
-                style={{ pointerEvents: 'none', fontWeight: isSelected ? 700 : 400 }}
-              >
-                {p.PlotID.replace('PLT-', '')}
-              </text>
-              <title>{p.PlotID} — {p.TreeSpecies} — {p.AreaHa} ha</title>
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Legend */}
-      <div style={{
-        position: 'absolute', bottom: 12, left: 12,
-        padding: '10px 12px', borderRadius: 'var(--radius-md)',
-        background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-        fontSize: 12,
-      }}>
-        <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 6, fontWeight: 500 }}>
-          Rủi ro phá rừng
-        </div>
-        {(['Thấp', 'Trung bình', 'Cao'] as DeforestationRiskStatus[]).map(r => {
-          const tone = RISK_TONE[r];
-          return (
-            <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: `var(--color-${tone}-subtle)`, border: `1.5px solid var(--color-${tone})`, flexShrink: 0 }} />
-              <span style={{ color: 'var(--color-text-secondary)' }}>{RISK_LABEL[r]}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {validPlots.length < plots.length && (
-        <div style={{
-          position: 'absolute', bottom: 12, right: 12,
-          fontSize: 11, color: 'var(--color-text-tertiary)',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          padding: '4px 8px', borderRadius: 'var(--radius-sm)',
-        }}>
-          {plots.length - validPlots.length} lô chưa có toạ độ
-        </div>
-      )}
-    </div>
+    <Wrapper apiKey={apiKey} version="weekly">
+      <GoogleMapView plots={plots} selectedId={selectedId} onSelect={onSelect} onOpen={onOpen} />
+    </Wrapper>
   );
 }
 

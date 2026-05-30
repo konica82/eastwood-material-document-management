@@ -43,9 +43,10 @@ export type EntityType = "Công ty" | "Cá nhân";
 export type LoaiHinhCongTy = "HTX" | "CP" | "TNHH" | "Cá nhân";
 
 export type DeforestationRiskStatus =
-  | "Thấp"        // low
-  | "Trung bình"  // medium
-  | "Cao";        // high — triggers additional EUDR due-diligence
+  | "Thấp"            // low
+  | "Trung bình"      // medium
+  | "Cao"             // high — triggers additional EUDR due-diligence
+  | "Chưa đánh giá";  // not yet assessed
 
 // ─── Plant ────────────────────────────────────────────────────────────────────
 

@@ -17,15 +17,17 @@ import type { PlotRegistry, DeforestationRiskStatus, PlotOwner, PolygonCoordinat
 // ─── Risk helpers ─────────────────────────────────────────────────────────────
 
 const RISK_LABEL: Record<DeforestationRiskStatus, string> = {
-  'Thấp':      'Rủi ro thấp',
-  'Trung bình':'Rủi ro vừa',
-  'Cao':       'Rủi ro cao',
+  'Thấp':           'Rủi ro thấp',
+  'Trung bình':     'Rủi ro vừa',
+  'Cao':            'Rủi ro cao',
+  'Chưa đánh giá':  'Chưa đánh giá',
 };
 
 const RISK_TONE: Record<DeforestationRiskStatus, 'success' | 'warning' | 'danger'> = {
-  'Thấp':      'success',
-  'Trung bình':'warning',
-  'Cao':       'danger',
+  'Thấp':           'success',
+  'Trung bình':     'warning',
+  'Cao':            'danger',
+  'Chưa đánh giá':  'success',
 };
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
