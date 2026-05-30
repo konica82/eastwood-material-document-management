@@ -31,16 +31,18 @@ const P_LEN = 16;
 const PRIMARY_SHEET = "NhaCungCap";
 const PRIMARY_RANGE = `${PRIMARY_SHEET}!A2:P`;
 
-// ─── Column indices — secondary ───────────────────────────────────────────────
-
+// Column layout matches actual AppSheet NhaCungCapPhu sheet (A=0 … K=10):
+//   A=id, B=ncc_chinh(FK→NhaCungCap.id), C=nhom_ncc, D=ten, E=hinh_thuc,
+//   F=ten_thuong_goi, G=cccd_mst, H=dia_chi, I=nguoi_lien_he, J=so_dien_thoai, K=email
 const S = {
-  ID: 0, TEN: 1, HINH_THUC: 2, CCCD_MST: 3, SO_DIEN_THOAI: 4,
-  CO_PHAN: 5, LO_RUNG: 6, NGAY_THAM_GIA: 7, CHINH_ID: 8,
+  ID: 0, CHINH_ID: 1, NHOM: 2, TEN: 3, HINH_THUC: 4,
+  TEN_THUONG_GOI: 5, CCCD_MST: 6, DIA_CHI: 7, NGUOI_LIEN_HE: 8,
+  SO_DIEN_THOAI: 9, EMAIL: 10,
 } as const;
 
-const S_LEN = 9;
+const S_LEN = 11;
 const SECONDARY_SHEET = "NhaCungCapPhu";
-const SECONDARY_RANGE = `${SECONDARY_SHEET}!A2:I`;
+const SECONDARY_RANGE = `${SECONDARY_SHEET}!A2:K`;
 
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
@@ -78,28 +80,25 @@ export function supplierToRow(s: Supplier): string[] {
 export function rowToSecondary(row: string[]): SecondarySupplier {
   return {
     id: cell(row, S.ID),
+    nha_cung_cap_chinh_id: cell(row, S.CHINH_ID),
     ten: cell(row, S.TEN),
     hinh_thuc: cell(row, S.HINH_THUC) as EntityType,
     cccd_mst: cell(row, S.CCCD_MST),
     so_dien_thoai: strOrNull(row, S.SO_DIEN_THOAI) ?? undefined,
-    co_phan_phan_tram: numOrNull(row, S.CO_PHAN) ?? undefined,
-    lo_rung: numOrNull(row, S.LO_RUNG) ?? undefined,
-    ngay_tham_gia: strOrNull(row, S.NGAY_THAM_GIA) ?? undefined,
-    nha_cung_cap_chinh_id: cell(row, S.CHINH_ID),
+    co_phan_phan_tram: undefined,
+    lo_rung: undefined,
+    ngay_tham_gia: undefined,
   };
 }
 
 export function secondaryToRow(s: SecondarySupplier): string[] {
   const row = new Array<string>(S_LEN).fill("");
   row[S.ID] = s.id;
+  row[S.CHINH_ID] = s.nha_cung_cap_chinh_id;
   row[S.TEN] = s.ten;
   row[S.HINH_THUC] = s.hinh_thuc;
   row[S.CCCD_MST] = s.cccd_mst;
   row[S.SO_DIEN_THOAI] = s.so_dien_thoai ?? "";
-  row[S.CO_PHAN] = s.co_phan_phan_tram != null ? String(s.co_phan_phan_tram) : "";
-  row[S.LO_RUNG] = s.lo_rung != null ? String(s.lo_rung) : "";
-  row[S.NGAY_THAM_GIA] = s.ngay_tham_gia ?? "";
-  row[S.CHINH_ID] = s.nha_cung_cap_chinh_id;
   return row;
 }
 
