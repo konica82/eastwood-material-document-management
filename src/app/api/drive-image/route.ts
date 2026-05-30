@@ -15,7 +15,8 @@ import { getDriveClient } from "@/lib/sheets-client";
 // ─── Folder map ───────────────────────────────────────────────────────────────
 
 const FOLDER_MAP: Record<string, string> = {
-  NguyenLieu_Images: process.env.DRIVE_FOLDER_NGUYEN_LIEU ?? "",
+  NguyenLieu_Images:   process.env.DRIVE_FOLDER_NGUYEN_LIEU    ?? "",
+  PlotRegistry_Images: process.env.DRIVE_FOLDER_PLOT_REGISTRY  ?? "",
 };
 
 // ─── File ID cache ────────────────────────────────────────────────────────────

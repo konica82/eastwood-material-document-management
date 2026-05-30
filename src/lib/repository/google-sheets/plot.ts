@@ -75,6 +75,13 @@ const DOCS_SHEET = "PlotDocuments";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Convert an AppSheet relative path to the drive-image proxy URL. */
+function toImageProxyUrl(value: string | null): string | null {
+  if (!value) return null;
+  if (value.startsWith("http")) return value;
+  return `/api/drive-image?path=${encodeURIComponent(value)}`;
+}
+
 /** Convert a bare year ("2022" or 2022) to an ISO date string "2022-01-01". */
 function yearToIso(value: string | null): string | null {
   if (!value) return null;
@@ -93,6 +100,7 @@ export function rowToPlot(row: string[]): PlotRegistry {
     TreeSpecies: cell(row, R.TREE_SPECIES),
     DeforestationRiskStatus: (strOrNull(row, R.DEFO_RISK) ?? 'Chưa đánh giá') as DeforestationRiskStatus,
     ActualQuantityDelivered: numCell(row, R.QUANTITY_TON),
+    image: toImageProxyUrl(strOrNull(row, R.IMAGE)),
     nha_may: "",  // shared sheet — no plant filter
     lat: numOrNull(row, R.LAT),
     lng: numOrNull(row, R.LNG),

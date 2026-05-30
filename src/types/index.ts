@@ -308,6 +308,9 @@ export interface PlotRegistry {
   certificate: string | null;     // e.g. "FSC-CoC", "PEFC", "Không", "Chờ cấp"
   cert_id: string | null;         // certificate code
 
+  /** AppSheet Drive image path — resolved via /api/drive-image proxy. */
+  image: string | null;
+
   created_at: string;
   updated_at: string;
   /** Populated on detail view. */

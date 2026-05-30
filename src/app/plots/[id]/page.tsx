@@ -230,6 +230,24 @@ export default function PlotDetailPage() {
         </div>
       )}
 
+      {/* ── Hero image (only when photo exists) ── */}
+      {plot.image && (
+        <div style={{
+          marginBottom: 16,
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          height: 220,
+          background: 'var(--color-bg-subtle)',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={plot.image}
+            alt={`Ảnh lô rừng ${plot.PlotID}`}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      )}
+
       {/* ── Tabs ── */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', marginBottom: 20 }}>
         {TABS.map(tab => {
