@@ -304,31 +304,12 @@ export default function CargoPage() {
 
 const VEHICLE_CONFIG: Record<VehicleType, {
   Icon: React.ComponentType<{ size?: number; stroke?: number; style?: React.CSSProperties }>;
-  label: string;
   color: string;
-  bg: string;
 }> = {
-  'Xe tải':   { Icon: IconTruck,         label: 'Xe tải',   color: 'var(--color-text-secondary)',  bg: 'var(--color-bg-subtle)' },
-  'Máy cày':  { Icon: IconTractor,       label: 'Máy cày',  color: 'var(--color-warning)',          bg: 'var(--color-warning-subtle)' },
-  'Đầu kéo':  { Icon: IconTruckDelivery, label: 'Đầu kéo',  color: 'var(--color-info)',             bg: 'var(--color-info-subtle)' },
+  'Xe tải':  { Icon: IconTruck,         color: 'var(--color-text-tertiary)' },
+  'Máy cày': { Icon: IconTractor,       color: 'var(--color-warning)' },
+  'Đầu kéo': { Icon: IconTruckDelivery, color: 'var(--color-info)' },
 };
-
-function VehicleTypeBadge({ type }: { type: VehicleType | null }) {
-  if (!type) return null;
-  const cfg = VEHICLE_CONFIG[type];
-  if (!cfg) return null;
-  const { Icon, label, color, bg } = cfg;
-  return (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 6px', borderRadius: 'var(--radius-sm)',
-      background: bg, marginBottom: 3,
-    }}>
-      <Icon size={11} stroke={1.75} style={{ color, flexShrink: 0 }} />
-      <span style={{ fontSize: 11, color, fontWeight: 500, lineHeight: 1 }}>{label}</span>
-    </div>
-  );
-}
 
 // ─── Table row ────────────────────────────────────────────────────────────────
 
@@ -358,23 +339,28 @@ function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
         {c.stt_tai ?? '—'}
       </td>
 
-      {/* Biển số + vehicle type + mooc */}
+      {/* Biển số + vehicle type icon inline */}
       <td style={tdStyle()}>
-        <VehicleTypeBadge type={c.loai_xe} />
-        <div>
-          <Link
-            href={`/cargo/${c.id}`}
-            onClick={e => e.stopPropagation()}
-            style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
-          >
-            {c.so_xe}
-          </Link>
-        </div>
-        {c.so_mooc && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
-            {c.so_mooc}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {(() => {
+            const cfg = c.loai_xe ? VEHICLE_CONFIG[c.loai_xe] : null;
+            return cfg ? <cfg.Icon size={16} stroke={1.5} style={{ color: cfg.color, flexShrink: 0 }} /> : null;
+          })()}
+          <div>
+            <Link
+              href={`/cargo/${c.id}`}
+              onClick={e => e.stopPropagation()}
+              style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
+            >
+              {c.so_xe}
+            </Link>
+            {c.so_mooc && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
+                {c.so_mooc}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </td>
 
       {/* Tài xế: name + CCCD */}
