@@ -283,12 +283,13 @@ function PlotsTable({ plots, selectedId, onSelect, onOpen }: {
         <thead>
           <tr style={{ background: 'var(--color-table-header-bg)' }}>
             <Th width={130}>Mã hồ sơ</Th>
-            <Th flex>Chủ rừng</Th>
-            <Th width={180}>Xã / Huyện</Th>
-            <Th align="right" width={100}>Diện tích</Th>
-            <Th width={130}>Loài cây</Th>
+            <Th flex>Tên</Th>
+            <Th width={160}>Xã – Tỉnh</Th>
+            <Th align="right" width={90}>Diện tích</Th>
+            <Th width={110}>Loài cây</Th>
             <Th width={150}>Rủi ro phá rừng</Th>
-            <Th width={180}>Toạ độ</Th>
+            <Th width={110} align="right">Ngày xác minh</Th>
+            <Th width={170}>Toạ độ</Th>
             <Th width={48} />
           </tr>
         </thead>
@@ -341,19 +342,17 @@ function PlotsTableRow({ plot: p, selected, onSelect, onOpen }: {
         </span>
       </Td>
       <Td>
-        <div style={{ color: 'var(--color-text-primary)' }}>
-          {p.owners?.[0]?.ten ?? (p.commune ?? '—')}
+        <div style={{ color: 'var(--color-text-primary)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>
+          {p.LandTitle || '—'}
         </div>
-        {p.commune && (
-          <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
-            {p.commune}
-          </div>
-        )}
       </Td>
       <Td>
-        <span style={{ color: 'var(--color-text-secondary)' }}>
-          {p.district ?? '—'}{p.province ? `, ${p.province}` : ''}
-        </span>
+        <div style={{ color: 'var(--color-text-primary)', fontSize: 12 }}>{p.commune ?? '—'}</div>
+        {p.province && (
+          <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
+            {p.province.replace('Tỉnh ', '').replace('Thành phố ', 'TP ')}
+          </div>
+        )}
       </Td>
       <Td align="right">
         <span style={{ fontFamily: 'var(--font-mono)' }}>
@@ -364,6 +363,11 @@ function PlotsTableRow({ plot: p, selected, onSelect, onOpen }: {
       <Td>{p.TreeSpecies}</Td>
       <Td>
         <RiskBadge status={p.DeforestationRiskStatus} tone={tone} dot />
+      </Td>
+      <Td align="right">
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-secondary)' }}>
+          {fmtDate(p.created_at) || '—'}
+        </span>
       </Td>
       <Td>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)' }}>
