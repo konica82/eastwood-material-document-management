@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Upload, Plus, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
+import { IconTruck, IconTractor, IconTruckDelivery } from '@tabler/icons-react';
+import type { VehicleType } from '@/types/index';
 import { usePlant } from '@/contexts/PlantContext';
 import { cargoApi } from '@/lib/api-client';
 import { fmtTime } from '@/lib/fmt';
@@ -298,6 +300,36 @@ export default function CargoPage() {
   );
 }
 
+// ─── Vehicle type badge ───────────────────────────────────────────────────────
+
+const VEHICLE_CONFIG: Record<VehicleType, {
+  Icon: React.ComponentType<{ size?: number; stroke?: number; style?: React.CSSProperties }>;
+  label: string;
+  color: string;
+  bg: string;
+}> = {
+  'Xe tải':   { Icon: IconTruck,         label: 'Xe tải',   color: 'var(--color-text-secondary)',  bg: 'var(--color-bg-subtle)' },
+  'Máy cày':  { Icon: IconTractor,       label: 'Máy cày',  color: 'var(--color-warning)',          bg: 'var(--color-warning-subtle)' },
+  'Đầu kéo':  { Icon: IconTruckDelivery, label: 'Đầu kéo',  color: 'var(--color-info)',             bg: 'var(--color-info-subtle)' },
+};
+
+function VehicleTypeBadge({ type }: { type: VehicleType | null }) {
+  if (!type) return null;
+  const cfg = VEHICLE_CONFIG[type];
+  if (!cfg) return null;
+  const { Icon, label, color, bg } = cfg;
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '2px 6px', borderRadius: 'var(--radius-sm)',
+      background: bg, marginBottom: 3,
+    }}>
+      <Icon size={11} stroke={1.75} style={{ color, flexShrink: 0 }} />
+      <span style={{ fontSize: 11, color, fontWeight: 500, lineHeight: 1 }}>{label}</span>
+    </div>
+  );
+}
+
 // ─── Table row ────────────────────────────────────────────────────────────────
 
 function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
@@ -326,15 +358,18 @@ function CargoRow({ cargo: c, isLast }: { cargo: Cargo; isLast: boolean }) {
         {c.stt_tai ?? '—'}
       </td>
 
-      {/* Biển số + mooc */}
+      {/* Biển số + vehicle type + mooc */}
       <td style={tdStyle()}>
-        <Link
-          href={`/cargo/${c.id}`}
-          onClick={e => e.stopPropagation()}
-          style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
-        >
-          {c.so_xe}
-        </Link>
+        <VehicleTypeBadge type={c.loai_xe} />
+        <div>
+          <Link
+            href={`/cargo/${c.id}`}
+            onClick={e => e.stopPropagation()}
+            style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500, fontFamily: 'var(--font-mono)', fontSize: 13 }}
+          >
+            {c.so_xe}
+          </Link>
+        </div>
         {c.so_mooc && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
             {c.so_mooc}
