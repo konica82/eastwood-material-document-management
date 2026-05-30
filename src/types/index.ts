@@ -345,9 +345,11 @@ export interface PolygonCoordinate {
 export interface PlotDocument {
   id: string;
   plot_id: string;
-  ten_tai_lieu: string;   // document name
-  loai: string;           // type (e.g. "Giấy chứng nhận", "Bản đồ")
-  drive_url: string;      // Google Drive file URL
+  loai: string;           // Type (e.g. "Sổ đỏ", "Bản đồ")
+  ten_tai_lieu: string;   // Title
+  mo_ta: string | null;   // Description
+  file_path: string | null; // AppSheet relative path → resolved to Drive URL
+  drive_url: string | null; // resolved proxy URL for download
   uploaded_at: string;
   uploaded_by: string;
 }

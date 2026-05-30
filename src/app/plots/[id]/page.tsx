@@ -781,18 +781,10 @@ function DocCard({ doc }: { doc: PlotDocument }) {
   const kind      = doc.loai.toUpperCase();
   const toneName  = DOC_TONES[kind] ?? 'info';
   const toneColor = toneName === 'info' ? 'var(--color-accent)' : `var(--color-${toneName})`;
+  const hasFile   = !!doc.drive_url;
 
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: 12, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-        display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-        background: hovered ? 'var(--color-bg-subtle)' : 'transparent',
-        transition: 'background var(--duration-fast) var(--ease-out)',
-      }}
-    >
+  const inner = (
+    <>
       <div style={{
         width: 36, height: 44, borderRadius: 'var(--radius-sm)',
         background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)',
@@ -806,11 +798,40 @@ function DocCard({ doc }: { doc: PlotDocument }) {
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {doc.ten_tai_lieu}
         </div>
+        {doc.mo_ta && (
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {doc.mo_ta}
+          </div>
+        )}
         <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
           {fmtDate(doc.uploaded_at)}
         </div>
       </div>
-      <Download size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} strokeWidth={1.75} />
+      {hasFile && <ExternalLink size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} strokeWidth={1.75} />}
+    </>
+  );
+
+  const sharedStyle: React.CSSProperties = {
+    padding: 12, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+    display: 'flex', alignItems: 'center', gap: 10,
+    background: hovered ? 'var(--color-bg-subtle)' : 'transparent',
+    transition: 'background var(--duration-fast) var(--ease-out)',
+    textDecoration: 'none', cursor: hasFile ? 'pointer' : 'default',
+  };
+
+  if (hasFile) {
+    return (
+      <a href={doc.drive_url!} target="_blank" rel="noopener noreferrer"
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+        style={sharedStyle}>
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={sharedStyle}>
+      {inner}
     </div>
   );
 }

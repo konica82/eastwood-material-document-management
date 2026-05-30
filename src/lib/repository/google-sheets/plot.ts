@@ -66,7 +66,8 @@ const R_LEN = 26;
 // PlotOwners: A=PlotOwnerID, B=PlotID, C=OwnerID(FK→NhaCungCapPhu), D=OwnershipRole, E=OwnershipShare, F=EffectiveDate
 const O = { ID: 0, PLOT_ID: 1, OWNER_ID: 2, VAI_TRO: 3, TY_LE: 4, HIEU_LUC_TU: 5 } as const;
 const C = { ID: 0, PLOT_ID: 1, LAT: 2, LNG: 3, THU_TU: 4 } as const;
-const D = { ID: 0, PLOT_ID: 1, TEN_TAI_LIEU: 2, LOAI: 3, DRIVE_URL: 4, UPLOADED_AT: 5, UPLOADED_BY: 6 } as const;
+// PlotDocuments: A=PlotDocumentsID, B=PlotID, C=Type, D=Title, E=Description, F=FilePath, G=CreatedDate, H=CreatedBy
+const D = { ID: 0, PLOT_ID: 1, LOAI: 2, TEN_TAI_LIEU: 3, MO_TA: 4, FILE_PATH: 5, UPLOADED_AT: 6, UPLOADED_BY: 7 } as const;
 
 const SHEET = "PlotRegistry";
 const OWNERS_SHEET = "PlotOwners";
@@ -168,12 +169,15 @@ function rowToCoord(row: string[]): PolygonCoordinate {
 }
 
 function rowToDocument(row: string[]): PlotDocument {
+  const filePath = strOrNull(row, D.FILE_PATH);
   return {
     id: cell(row, D.ID),
     plot_id: cell(row, D.PLOT_ID),
-    ten_tai_lieu: cell(row, D.TEN_TAI_LIEU),
     loai: cell(row, D.LOAI),
-    drive_url: cell(row, D.DRIVE_URL),
+    ten_tai_lieu: cell(row, D.TEN_TAI_LIEU),
+    mo_ta: strOrNull(row, D.MO_TA),
+    file_path: filePath,
+    drive_url: filePath ? `/api/drive-file?path=${encodeURIComponent(filePath)}` : null,
     uploaded_at: cell(row, D.UPLOADED_AT),
     uploaded_by: cell(row, D.UPLOADED_BY),
   };
