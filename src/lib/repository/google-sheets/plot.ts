@@ -50,6 +50,16 @@ const OWNERS_SHEET = "PlotOwners";
 const POLY_SHEET = "PolygonCoordinates";
 const DOCS_SHEET = "PlotDocuments";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Convert a bare year ("2022" or 2022) to an ISO date string "2022-01-01". */
+function yearToIso(value: string | null): string | null {
+  if (!value) return null;
+  const year = parseInt(value, 10);
+  if (isNaN(year) || year < 1900 || year > 2100) return null;
+  return `${year}-01-01`;
+}
+
 // ─── Row mapping ──────────────────────────────────────────────────────────────
 
 export function rowToPlot(row: string[]): PlotRegistry {
@@ -66,7 +76,7 @@ export function rowToPlot(row: string[]): PlotRegistry {
     commune: strOrNull(row, R.COMMUNE),
     district: strOrNull(row, R.DISTRICT),
     province: strOrNull(row, R.PROVINCE),
-    planted_at: strOrNull(row, R.PLANTED_YEAR),
+    planted_at: yearToIso(strOrNull(row, R.PLANTED_YEAR)),
     harvest_plan: strOrNull(row, R.HARVEST_DATE),
     rotation_years: null,
     density_per_ha: null,
