@@ -168,12 +168,12 @@ export default function SuppliersPage() {
   const totalSecondaries = allSecondaries.length;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 57px)', overflow: 'hidden' }}>
 
       {/* ── Page header ── */}
       <div style={{
         display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-        marginBottom: 'var(--space-4)', gap: 'var(--space-4)', flexWrap: 'wrap',
+        padding: '0 0 var(--space-4)', gap: 'var(--space-4)', flexWrap: 'wrap', flexShrink: 0,
       }}>
         <div>
           <h1 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 4px' }}>
@@ -197,12 +197,12 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      {/* ── Split layout ── */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      {/* ── Split layout — viewport locked ── */}
+      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
 
         {/* ── Left panel ── */}
         <div style={{
-          width: 316, flexShrink: 0,
+          width: 316, flexShrink: 0, display: 'flex', flexDirection: 'column',
           border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
           background: 'var(--color-bg-surface)', overflow: 'hidden',
         }}>
@@ -250,29 +250,31 @@ export default function SuppliersPage() {
             )}
           </div>
 
-          {/* List */}
-          {loading ? (
-            <ListSkeleton />
-          ) : filteredPrimaries.length === 0 ? (
-            <div style={{
-              padding: '24px 16px', textAlign: 'center',
-              fontSize: 'var(--font-size-sm)', color: 'var(--color-text-tertiary)',
-            }}>
-              Không tìm thấy kết quả.
-            </div>
-          ) : filteredPrimaries.map(s => (
-            <SupplierListItem
-              key={s.id}
-              supplier={s}
-              secCount={secCountMap.get(s.id) ?? 0}
-              active={s.id === selectedIdResolved}
-              onClick={() => { setSelectedId(s.id); setEditing(false); setFormError(null); }}
-            />
-          ))}
+          {/* List — scrollable */}
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            {loading ? (
+              <ListSkeleton />
+            ) : filteredPrimaries.length === 0 ? (
+              <div style={{
+                padding: '24px 16px', textAlign: 'center',
+                fontSize: 'var(--font-size-sm)', color: 'var(--color-text-tertiary)',
+              }}>
+                Không tìm thấy kết quả.
+              </div>
+            ) : filteredPrimaries.map(s => (
+              <SupplierListItem
+                key={s.id}
+                supplier={s}
+                secCount={secCountMap.get(s.id) ?? 0}
+                active={s.id === selectedIdResolved}
+                onClick={() => { setSelectedId(s.id); setEditing(false); setFormError(null); }}
+              />
+            ))}
+          </div>
         </div>
 
         {/* ── Right panel ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
           {loading ? (
             <div style={{ ...cardStyle, padding: 20 }}><DetailSkeleton /></div>
           ) : !selected ? (
@@ -284,8 +286,8 @@ export default function SuppliersPage() {
             </div>
           ) : (
             <>
-              {/* Hero card */}
-              <div style={{ ...cardStyle, padding: 20 }}>
+              {/* Hero card — fixed height, never scrolls */}
+              <div style={{ ...cardStyle, padding: 20, flexShrink: 0 }}>
                 <div style={{
                   display: 'flex', alignItems: 'flex-start',
                   justifyContent: 'space-between', gap: 16,
@@ -391,8 +393,8 @@ export default function SuppliersPage() {
                 )}
               </div>
 
-              {/* Secondary suppliers card */}
-              <div style={{ ...cardStyle, overflow: 'hidden' }}>
+              {/* Secondary suppliers card — flex:1 so it fills remaining height */}
+              <div style={{ ...cardStyle, overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {/* Card header */}
                 <div style={{
                   padding: '14px 20px', borderBottom: '1px solid var(--color-border)',
@@ -433,79 +435,81 @@ export default function SuppliersPage() {
                   </div>
                 </div>
 
-                {/* Table */}
-                {detailLoading ? (
-                  <div style={{
-                    padding: '24px 20px', textAlign: 'center',
-                    fontSize: 'var(--font-size-sm)', color: 'var(--color-text-tertiary)',
-                  }}>
-                    Đang tải...
-                  </div>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-sm)' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--color-table-header-bg)' }}>
-                        <Th flex>Họ tên</Th>
-                        <Th>CCCD</Th>
-                        <Th>Tham gia</Th>
-                        <Th align="right" width={110}>Cổ phần</Th>
-                        <Th align="right" width={72}>Lô rừng</Th>
-                        {canEdit && <Th width={44} />}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detailSecondaries.length === 0 && (
-                        <tr>
-                          <td colSpan={canEdit ? 6 : 5} style={{
-                            padding: '24px 20px', textAlign: 'center',
-                            color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)',
-                          }}>
-                            Chưa có nhà cung cấp phụ nào.
-                          </td>
+                {/* Table — scrollable container fills remaining height */}
+                <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                  {detailLoading ? (
+                    <div style={{
+                      padding: '24px 20px', textAlign: 'center',
+                      fontSize: 'var(--font-size-sm)', color: 'var(--color-text-tertiary)',
+                    }}>
+                      Đang tải...
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-sm)' }}>
+                      <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                        <tr style={{ background: 'var(--color-table-header-bg)' }}>
+                          <Th flex>Họ tên</Th>
+                          <Th>CCCD</Th>
+                          <Th>Tham gia</Th>
+                          <Th align="right" width={110}>Cổ phần</Th>
+                          <Th align="right" width={72}>Lô rừng</Th>
+                          {canEdit && <Th width={44} />}
                         </tr>
-                      )}
-                      {detailSecondaries.map(s => (
-                        <SecondaryRow key={s.id} supplier={s} showEdit={canEdit} />
-                      ))}
+                      </thead>
+                      <tbody>
+                        {detailSecondaries.length === 0 && (
+                          <tr>
+                            <td colSpan={canEdit ? 6 : 5} style={{
+                              padding: '24px 20px', textAlign: 'center',
+                              color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)',
+                            }}>
+                              Chưa có nhà cung cấp phụ nào.
+                            </td>
+                          </tr>
+                        )}
+                        {detailSecondaries.map(s => (
+                          <SecondaryRow key={s.id} supplier={s} showEdit={canEdit} />
+                        ))}
 
-                      {/* Inline add row */}
-                      {canEdit && (
-                        <tr>
-                          <td colSpan={canEdit ? 6 : 5} style={{
-                            padding: '10px 16px',
-                            borderTop: detailSecondaries.length > 0 ? '1px solid var(--color-border)' : undefined,
-                            background: 'var(--color-bg-subtle)',
-                          }}>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                              <input
-                                type="text" value={newName}
-                                onChange={e => setNewName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleAddSecondary()}
-                                placeholder="Họ và tên"
-                                style={{ ...addInputStyle, flex: 1 }}
-                              />
-                              <input
-                                type="text" value={newCccd}
-                                onChange={e => setNewCccd(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleAddSecondary()}
-                                placeholder="Số CCCD (12 số)"
-                                style={{ ...addInputStyle, width: 180, fontFamily: 'var(--font-mono)' }}
-                              />
-                              <button
-                                onClick={handleAddSecondary}
-                                disabled={!newName.trim() || !newCccd.trim()}
-                                style={secondaryBtnStyle}
-                              >
-                                <Plus size={12} strokeWidth={2} />
-                                Thêm
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                )}
+                        {/* Inline add row */}
+                        {canEdit && (
+                          <tr>
+                            <td colSpan={canEdit ? 6 : 5} style={{
+                              padding: '10px 16px',
+                              borderTop: detailSecondaries.length > 0 ? '1px solid var(--color-border)' : undefined,
+                              background: 'var(--color-bg-subtle)',
+                            }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <input
+                                  type="text" value={newName}
+                                  onChange={e => setNewName(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && handleAddSecondary()}
+                                  placeholder="Họ và tên"
+                                  style={{ ...addInputStyle, flex: 1 }}
+                                />
+                                <input
+                                  type="text" value={newCccd}
+                                  onChange={e => setNewCccd(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && handleAddSecondary()}
+                                  placeholder="Số CCCD (12 số)"
+                                  style={{ ...addInputStyle, width: 180, fontFamily: 'var(--font-mono)' }}
+                                />
+                                <button
+                                  onClick={handleAddSecondary}
+                                  disabled={!newName.trim() || !newCccd.trim()}
+                                  style={secondaryBtnStyle}
+                                >
+                                  <Plus size={12} strokeWidth={2} />
+                                  Thêm
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               </div>
             </>
           )}
