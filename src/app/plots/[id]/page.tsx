@@ -522,8 +522,13 @@ function OwnerRow({ owner: o, isLast }: { owner: PlotOwner; isLast: boolean }) {
         transition: 'background var(--duration-fast) var(--ease-out)',
       }}
     >
-      <Td>{o.ten}</Td>
-      <Td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{o.cccd}</span></Td>
+      <Td>
+        <div style={{ fontWeight: 500, fontSize: 13 }}>{o.ten || '—'}</div>
+        {o.so_dien_thoai && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>{o.so_dien_thoai}</div>
+        )}
+      </Td>
+      <Td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{o.cccd || '—'}</span></Td>
       <Td><span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{o.vai_tro}</span></Td>
       <Td align="right">
         {o.ty_le != null ? (

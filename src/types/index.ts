@@ -319,12 +319,16 @@ export interface PlotRegistry {
 }
 
 export interface PlotOwner {
-  id: string;
-  plot_id: string;
-  ten: string;           // owner name
-  cccd: string;          // national ID
-  vai_tro: string;       // role (e.g. "Chủ rừng", "Chủ gỗ")
-  ty_le: number | null;  // ownership share 0–100 %
+  id: string;             // PlotOwnerID
+  plot_id: string;        // FK → PlotRegistry.PlotID
+  owner_id: string;       // FK → NhaCungCapPhu.id
+  vai_tro: string;        // OwnershipRole (e.g. "Primary", "Joint")
+  ty_le: number | null;   // OwnershipShare 0–100 %
+  hieu_luc_tu: string | null;  // EffectiveDate
+  // Resolved from NhaCungCapPhu join:
+  ten: string;            // owner name
+  cccd: string;           // CCCD/MST (tax/national ID)
+  so_dien_thoai: string | null;
 }
 
 export interface PolygonCoordinate {

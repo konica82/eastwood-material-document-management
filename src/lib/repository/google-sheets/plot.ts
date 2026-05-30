@@ -26,7 +26,29 @@ import type { PlotRepository } from "../types";
 import type { ListQuery } from "../../../types/api";
 import { readRangeById, cell, numCell, numOrNull, strOrNull, queueUpdateById } from "./base";
 import { cache, TTL, cacheKey, listCacheKey } from "../../cache";
-import { LORUNG_SHEETS_ID } from "../../plants/config";
+import { LORUNG_SHEETS_ID, NHA_CUNG_CAP_SHEETS_ID } from "../../plants/config";
+
+// NhaCungCapPhu columns: A=id, B=ncc_chinh, C=nhom_ncc, D=ten, E=hinh_thuc, F=ten_thuong_goi, G=cccd_mst, H=dia_chi, I=nguoi_lien_he, J=so_dien_thoai
+const NCP = { ID: 0, TEN: 3, CCCD_MST: 6, SO_DIEN_THOAI: 9 } as const;
+
+async function fetchSecondarySupplierMap(): Promise<Map<string, { ten: string; cccd: string; so_dien_thoai: string | null }>> {
+  const cacheKey = "nha_cung_cap_phu:map";
+  const cached = cache.get<Map<string, { ten: string; cccd: string; so_dien_thoai: string | null }>>(cacheKey);
+  if (cached) return cached;
+
+  const rows = await readRangeById(NHA_CUNG_CAP_SHEETS_ID, "NhaCungCapPhu!A2:J");
+  const map = new Map<string, { ten: string; cccd: string; so_dien_thoai: string | null }>();
+  for (const row of rows) {
+    const id = cell(row, NCP.ID);
+    if (id) map.set(id, {
+      ten: cell(row, NCP.TEN),
+      cccd: cell(row, NCP.CCCD_MST),
+      so_dien_thoai: strOrNull(row, NCP.SO_DIEN_THOAI),
+    });
+  }
+  cache.set(cacheKey, map, TTL.REFERENCE);
+  return map;
+}
 
 // ─── Column indices ───────────────────────────────────────────────────────────
 
@@ -41,7 +63,8 @@ const R = {
 
 const R_LEN = 26;
 
-const O = { ID: 0, PLOT_ID: 1, TEN: 2, CCCD: 3, VAI_TRO: 4, TY_LE: 5 } as const;
+// PlotOwners: A=PlotOwnerID, B=PlotID, C=OwnerID(FK→NhaCungCapPhu), D=OwnershipRole, E=OwnershipShare, F=EffectiveDate
+const O = { ID: 0, PLOT_ID: 1, OWNER_ID: 2, VAI_TRO: 3, TY_LE: 4, HIEU_LUC_TU: 5 } as const;
 const C = { ID: 0, PLOT_ID: 1, LAT: 2, LNG: 3, THU_TU: 4 } as const;
 const D = { ID: 0, PLOT_ID: 1, TEN_TAI_LIEU: 2, LOAI: 3, DRIVE_URL: 4, UPLOADED_AT: 5, UPLOADED_BY: 6 } as const;
 
@@ -115,10 +138,14 @@ function rowToOwner(row: string[]): PlotOwner {
   return {
     id: cell(row, O.ID),
     plot_id: cell(row, O.PLOT_ID),
-    ten: cell(row, O.TEN),
-    cccd: cell(row, O.CCCD),
+    owner_id: cell(row, O.OWNER_ID),
     vai_tro: cell(row, O.VAI_TRO),
     ty_le: numOrNull(row, O.TY_LE),
+    hieu_luc_tu: strOrNull(row, O.HIEU_LUC_TU),
+    // resolved via join — defaults until populated
+    ten: "",
+    cccd: "",
+    so_dien_thoai: null,
   };
 }
 
@@ -210,15 +237,24 @@ export function makePlotRepository(plantId: string): PlotRepository {
       const plot = all.find((p) => p.PlotID === plotId);
       if (!plot) return null;
 
-      const [ownerRows, coordRows, docRows] = await Promise.all([
-        readRangeById(LORUNG_SHEETS_ID, `${OWNERS_SHEET}!A2:F`),
+      const [ownerRows, coordRows, docRows, supplierMap] = await Promise.all([
+        readRangeById(LORUNG_SHEETS_ID, `${OWNERS_SHEET}!A2:J`),
         readRangeById(LORUNG_SHEETS_ID, `${POLY_SHEET}!A2:E`),
         readRangeById(LORUNG_SHEETS_ID, `${DOCS_SHEET}!A2:G`),
+        fetchSecondarySupplierMap(),
       ]);
 
       const result: PlotRegistry = {
         ...plot,
-        owners: ownerRows.filter((r) => r[O.PLOT_ID] === plotId).map(rowToOwner),
+        owners: ownerRows
+          .filter((r) => r[O.PLOT_ID] === plotId)
+          .map((r) => {
+            const owner = rowToOwner(r);
+            const ncp = supplierMap.get(owner.owner_id);
+            return ncp
+              ? { ...owner, ten: ncp.ten, cccd: ncp.cccd, so_dien_thoai: ncp.so_dien_thoai }
+              : owner;
+          }),
         polygon: coordRows
           .filter((r) => r[C.PLOT_ID] === plotId)
           .map(rowToCoord)

@@ -35,31 +35,31 @@ function iso(daysAgo: number, hour = 8): string {
 
 const OWNERS: PlotOwner[] = [
   // PLT-001
-  { id: 'own-001', plot_id: 'PLT-001', ten: 'Nguyễn Văn Tâm',   cccd: '049083004217', vai_tro: 'Chủ rừng', ty_le: 60 },
-  { id: 'own-002', plot_id: 'PLT-001', ten: 'Nguyễn Thị Mai',   cccd: '049090006531', vai_tro: 'Chủ gỗ',   ty_le: 40 },
+  { id: 'own-001', plot_id: 'PLT-001', owner_id: '', ten: 'Nguyễn Văn Tâm',  cccd: '049083004217', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 60,  hieu_luc_tu: null },
+  { id: 'own-002', plot_id: 'PLT-001', owner_id: '', ten: 'Nguyễn Thị Mai',  cccd: '049090006531', so_dien_thoai: null, vai_tro: 'Chủ gỗ',   ty_le: 40,  hieu_luc_tu: null },
   // PLT-002
-  { id: 'own-003', plot_id: 'PLT-002', ten: 'Trần Văn Mạnh',    cccd: '049084001033', vai_tro: 'Chủ rừng', ty_le: 100 },
+  { id: 'own-003', plot_id: 'PLT-002', owner_id: '', ten: 'Trần Văn Mạnh',   cccd: '049084001033', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 100, hieu_luc_tu: null },
   // PLT-003
-  { id: 'own-004', plot_id: 'PLT-003', ten: 'Lê Thị Hoa',       cccd: '049088012490', vai_tro: 'Chủ rừng', ty_le: 50 },
-  { id: 'own-005', plot_id: 'PLT-003', ten: 'Lê Văn Nam',        cccd: '049085018744', vai_tro: 'Chủ gỗ',   ty_le: 50 },
+  { id: 'own-004', plot_id: 'PLT-003', owner_id: '', ten: 'Lê Thị Hoa',      cccd: '049088012490', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 50,  hieu_luc_tu: null },
+  { id: 'own-005', plot_id: 'PLT-003', owner_id: '', ten: 'Lê Văn Nam',       cccd: '049085018744', so_dien_thoai: null, vai_tro: 'Chủ gỗ',   ty_le: 50,  hieu_luc_tu: null },
   // PLT-004
-  { id: 'own-006', plot_id: 'PLT-004', ten: 'Phạm Quốc Đạt',    cccd: '049082007751', vai_tro: 'Chủ rừng', ty_le: 100 },
+  { id: 'own-006', plot_id: 'PLT-004', owner_id: '', ten: 'Phạm Quốc Đạt',   cccd: '049082007751', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 100, hieu_luc_tu: null },
   // PLT-005
-  { id: 'own-007', plot_id: 'PLT-005', ten: 'Hoàng Văn Bình',   cccd: '049089004288', vai_tro: 'Chủ rừng', ty_le: 70 },
-  { id: 'own-008', plot_id: 'PLT-005', ten: 'Hoàng Thị Linh',   cccd: '049091009923', vai_tro: 'Chủ gỗ',   ty_le: 30 },
+  { id: 'own-007', plot_id: 'PLT-005', owner_id: '', ten: 'Hoàng Văn Bình',  cccd: '049089004288', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 70,  hieu_luc_tu: null },
+  { id: 'own-008', plot_id: 'PLT-005', owner_id: '', ten: 'Hoàng Thị Linh',  cccd: '049091009923', so_dien_thoai: null, vai_tro: 'Chủ gỗ',   ty_le: 30,  hieu_luc_tu: null },
   // PLT-006
-  { id: 'own-009', plot_id: 'PLT-006', ten: 'Lê Văn Trường',    cccd: '059087005321', vai_tro: 'Chủ rừng', ty_le: 80 },
-  { id: 'own-010', plot_id: 'PLT-006', ten: 'Lê Thị Phương',    cccd: '059092011042', vai_tro: 'Chủ gỗ',   ty_le: 20 },
-  // PLT-007 (NMXH)
-  { id: 'own-011', plot_id: 'PLT-007', ten: 'Võ Thanh Hùng',    cccd: '046087003712', vai_tro: 'Chủ rừng', ty_le: 100 },
-  // PLT-008 (NMXH)
-  { id: 'own-012', plot_id: 'PLT-008', ten: 'Đặng Văn Lộc',     cccd: '046083009401', vai_tro: 'Chủ rừng', ty_le: 55 },
-  { id: 'own-013', plot_id: 'PLT-008', ten: 'Đặng Thị Lan',     cccd: '046089017833', vai_tro: 'Chủ gỗ',   ty_le: 45 },
-  // PLT-009 (NMCT)
-  { id: 'own-014', plot_id: 'PLT-009', ten: 'Bùi Quang Huy',    cccd: '038086002198', vai_tro: 'Chủ rừng', ty_le: 100 },
-  // PLT-010 (NMCT)
-  { id: 'own-015', plot_id: 'PLT-010', ten: 'Ngô Đức Trí',      cccd: '038090007624', vai_tro: 'Chủ rừng', ty_le: 60 },
-  { id: 'own-016', plot_id: 'PLT-010', ten: 'Ngô Thị Thu',      cccd: '038093014400', vai_tro: 'Chủ gỗ',   ty_le: 40 },
+  { id: 'own-009', plot_id: 'PLT-006', owner_id: '', ten: 'Lê Văn Trường',   cccd: '059087005321', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 80,  hieu_luc_tu: null },
+  { id: 'own-010', plot_id: 'PLT-006', owner_id: '', ten: 'Lê Thị Phương',   cccd: '059092011042', so_dien_thoai: null, vai_tro: 'Chủ gỗ',   ty_le: 20,  hieu_luc_tu: null },
+  // PLT-007
+  { id: 'own-011', plot_id: 'PLT-007', owner_id: '', ten: 'Võ Thanh Hùng',   cccd: '046087003712', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 100, hieu_luc_tu: null },
+  // PLT-008
+  { id: 'own-012', plot_id: 'PLT-008', owner_id: '', ten: 'Đặng Văn Lộc',    cccd: '046083009401', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 55,  hieu_luc_tu: null },
+  { id: 'own-013', plot_id: 'PLT-008', owner_id: '', ten: 'Đặng Thị Lan',    cccd: '046089017833', so_dien_thoai: null, vai_tro: 'Chủ gỗ',   ty_le: 45,  hieu_luc_tu: null },
+  // PLT-009
+  { id: 'own-014', plot_id: 'PLT-009', owner_id: '', ten: 'Bùi Quang Huy',   cccd: '038086002198', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 100, hieu_luc_tu: null },
+  // PLT-010
+  { id: 'own-015', plot_id: 'PLT-010', owner_id: '', ten: 'Ngô Đức Trí',     cccd: '038090007624', so_dien_thoai: null, vai_tro: 'Chủ rừng', ty_le: 60,  hieu_luc_tu: null },
+  { id: 'own-016', plot_id: 'PLT-010', owner_id: '', ten: 'Ngô Thị Thu',     cccd: '038093014400', so_dien_thoai: null, vai_tro: 'Chủ gỗ',   ty_le: 40,  hieu_luc_tu: null },
 ];
 
 // ─── Seed: Polygon coordinates ────────────────────────────────────────────────
